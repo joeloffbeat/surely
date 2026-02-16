@@ -1,0 +1,16 @@
+node_modules/
+.next/
+.env
+.env.local
+.DS_Store
+cache/
+out/
+*.log
+broadcast/
+.playwright-data/
+.playwright-mcp/
+data/
+.vercel/
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+.cre_build_tmp.js
