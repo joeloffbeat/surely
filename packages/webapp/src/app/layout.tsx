@@ -1,5 +1,20 @@
 import type { Metadata } from "next";
+import { Outfit, DM_Mono } from "next/font/google";
 import "./globals.css";
+import Header from "@/components/layout/header";
+import Footer from "@/components/layout/footer";
+import { Providers } from "./providers";
+
+const outfit = Outfit({
+  variable: "--font-outfit",
+  subsets: ["latin"],
+});
+
+const dmMono = DM_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+  weight: ["300", "400", "500"],
+});
 
 export const metadata: Metadata = {
   title: "Surely",
@@ -8,10 +23,20 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={`${outfit.variable} ${dmMono.variable} antialiased`}>
+        <Providers>
+          <div className="flex min-h-screen flex-col">
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
+        </Providers>
+      </body>
     </html>
   );
 }
