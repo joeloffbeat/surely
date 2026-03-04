@@ -1,0 +1,12 @@
+{
+  "poolAddress": "0x2fE4Be234deEf362A3ABCAE6bFcC4549eA30c14F",
+  "creRouterAddress": "0xB875b7132aE48fe7b3029C2b74D3E42A5A6A68b4",
+  "receiverAddress": "0xB875b7132aE48fe7b3029C2b74D3E42A5A6A68b4",
+  "dataSource1Url": "http://localhost:4000/api/btc-price/coingecko",
+  "dataSource2Url": "http://localhost:4000/api/btc-price/cryptocompare",
+  "dataSource3Url": "http://localhost:4000/api/btc-price/chainlink",
+  "triggerThreshold": 20,
+  "comparison": 1,
+  "gasLimit": 500000,
+  "chainSelectorName": "ethereum-testnet-sepolia-base-1"
+}
