@@ -1,0 +1,8 @@
+{
+  "userAddress": "0xDFEe4486860BDfda8162A9404184ab797FeCa781",
+  "verificationType": 1,
+  "verificationData": {
+    "name": "John Doe",
+    "idNumber": "ID12345"
+  }
+}

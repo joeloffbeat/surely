@@ -1,0 +1,8 @@
+{
+  "verificationApiUrl": "http://localhost:4000",
+  "complianceConsumerAddress": "0xF9190C124b9f34d97c5153517FF5c6BD654e0f01",
+  "receiverAddress": "0xF9190C124b9f34d97c5153517FF5c6BD654e0f01",
+  "gasLimit": 500000,
+  "chainSelectorName": "ethereum-testnet-sepolia-base-1",
+  "publicKey": "0xDFEe4486860BDfda8162A9404184ab797FeCa781"
+}
