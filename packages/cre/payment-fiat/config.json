@@ -1,0 +1,8 @@
+{
+  "stripeVerifyUrl": "http://localhost:4000/stripe/verify",
+  "czusdConsumerAddress": "0xE6D1361B28713eE61d09D0a574F3Dcc7A49aA6F3",
+  "receiverAddress": "0xE6D1361B28713eE61d09D0a574F3Dcc7A49aA6F3",
+  "gasLimit": 500000,
+  "chainSelectorName": "ethereum-testnet-sepolia-base-1",
+  "publicKey": "0xDFEe4486860BDfda8162A9404184ab797FeCa781"
+}

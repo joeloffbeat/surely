@@ -1,0 +1,5 @@
+{
+  "paymentIntentId": "pi_test_123",
+  "amount": 500,
+  "recipient": "0xDFEe4486860BDfda8162A9404184ab797FeCa781"
+}
