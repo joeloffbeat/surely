@@ -1,0 +1,444 @@
+/* ===========================================
+   PITCH CONTAINER — fixed fullscreen overlay
+   =========================================== */
+
+.pitchContainer {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #fafafa;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ===========================================
+   SLIDES
+   =========================================== */
+
+.slide {
+  height: 100svh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+}
+
+.slideContent {
+  padding: clamp(2.5rem, 6vw, 6rem);
+  max-width: 980px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.25rem, 3vh, 2.25rem);
+}
+
+.centered {
+  align-items: center;
+  text-align: center;
+  margin: 0 auto;
+}
+
+/* ===========================================
+   DECORATIVE BACKGROUNDS
+   =========================================== */
+
+.gridBg {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.045) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+}
+
+.glowBg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      ellipse at 15% 85%,
+      rgba(0, 0, 0, 0.015) 0%,
+      transparent 55%
+    ),
+    radial-gradient(ellipse at 85% 15%, rgba(0, 0, 0, 0.01) 0%, transparent 55%);
+  pointer-events: none;
+}
+
+/* ===========================================
+   PROGRESS DOTS
+   =========================================== */
+
+.progressDots {
+  position: fixed;
+  right: clamp(1rem, 2.5vw, 1.75rem);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 300;
+}
+
+.dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.15);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: block;
+}
+
+.dotActive {
+  background: rgba(0, 0, 0, 0.65);
+  height: 18px;
+  border-radius: 2px;
+}
+
+/* ===========================================
+   TYPOGRAPHY
+   =========================================== */
+
+.title {
+  font-size: clamp(3.5rem, 11vw, 9rem);
+  font-family: var(--font-geist-sans);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+  color: #0a0a0a;
+}
+
+.heading {
+  font-size: clamp(1.75rem, 4vw, 3.25rem);
+  font-family: var(--font-geist-sans);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  color: #0a0a0a;
+}
+
+.subtitle {
+  font-size: clamp(1rem, 2vw, 1.4rem);
+  color: #666;
+  line-height: 1.65;
+  font-family: var(--font-geist-sans);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.eyebrow {
+  font-size: clamp(0.6rem, 1vw, 0.75rem);
+  font-family: var(--font-geist-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #aaa;
+}
+
+.body {
+  font-size: clamp(0.85rem, 1.4vw, 1rem);
+  color: #666;
+  line-height: 1.75;
+  font-family: var(--font-geist-sans);
+}
+
+.mono {
+  font-family: var(--font-geist-mono);
+}
+
+.dim {
+  color: #888;
+}
+.dimmer {
+  color: #bbb;
+}
+.muted {
+  color: #aaa;
+}
+
+/* ===========================================
+   TAG LINE (title slide)
+   =========================================== */
+
+.tagLine {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.tag {
+  font-family: var(--font-geist-mono);
+  font-size: clamp(0.55rem, 0.9vw, 0.7rem);
+  color: #bbb;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.tagDivider {
+  color: #ddd;
+  font-size: 0.8rem;
+}
+
+/* ===========================================
+   PROBLEM SLIDE
+   =========================================== */
+
+.problemLines {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.5rem, 1.5vh, 1rem);
+}
+
+.problemLine {
+  font-size: clamp(1.35rem, 3.2vw, 2.5rem);
+  font-family: var(--font-geist-sans);
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  color: #0a0a0a;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.problemLine em {
+  font-style: normal;
+  color: #0a0a0a;
+  font-weight: 700;
+}
+
+/* ===========================================
+   FLOW DIAGRAM (solution slide)
+   =========================================== */
+
+.flowDiagram {
+  display: flex;
+  align-items: stretch;
+  gap: clamp(0.5rem, 1.5vw, 1rem);
+  flex-wrap: wrap;
+}
+
+.flowStep {
+  flex: 1;
+  min-width: clamp(100px, 20vw, 160px);
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: clamp(0.75rem, 1.5vw, 1.25rem);
+  background: #ffffff;
+}
+
+.flowLabel {
+  font-family: var(--font-geist-mono);
+  font-size: clamp(0.6rem, 0.9vw, 0.75rem);
+  color: #0a0a0a;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.flowDesc {
+  font-size: clamp(0.65rem, 1vw, 0.8rem);
+  color: #888;
+  line-height: 1.55;
+}
+
+.flowArrow {
+  font-size: clamp(0.8rem, 1.5vw, 1.1rem);
+  color: #ccc;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+/* ===========================================
+   ACE POLICIES
+   =========================================== */
+
+.policies {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: clamp(0.5rem, 1.2vw, 0.85rem);
+}
+
+.policyCard {
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: clamp(0.85rem, 1.5vw, 1.25rem);
+  background: #ffffff;
+}
+
+.policyLabel {
+  font-family: var(--font-geist-mono);
+  font-size: clamp(0.6rem, 0.85vw, 0.72rem);
+  color: #0a0a0a;
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.policyDesc {
+  font-size: clamp(0.62rem, 0.9vw, 0.75rem);
+  color: #888;
+  line-height: 1.5;
+}
+
+/* ===========================================
+   STACK SLIDE
+   =========================================== */
+
+.stackGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+}
+
+.stackRow {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(1rem, 3vw, 2.5rem);
+  padding: clamp(0.6rem, 1.2vh, 0.9rem) 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.stackRow:last-child {
+  border-bottom: none;
+}
+
+.stackCat {
+  font-family: var(--font-geist-mono);
+  font-size: clamp(0.55rem, 0.8vw, 0.68rem);
+  color: #bbb;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  min-width: clamp(60px, 8vw, 90px);
+  flex-shrink: 0;
+}
+
+.stackVal {
+  font-size: clamp(0.72rem, 1.1vw, 0.85rem);
+  color: #555;
+  font-family: var(--font-geist-sans);
+}
+
+/* ===========================================
+   DEMO SLIDE
+   =========================================== */
+
+.demoLabel {
+  font-family: var(--font-geist-mono);
+  font-size: clamp(0.6rem, 0.9vw, 0.72rem);
+  color: #ccc;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  margin-bottom: 0.25rem;
+}
+
+.demoHeading {
+  font-size: clamp(3.5rem, 10vw, 8rem);
+  font-family: var(--font-geist-sans);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  color: #0a0a0a;
+  line-height: 0.95;
+  margin: 0;
+}
+
+.demoPools {
+  font-family: var(--font-geist-mono);
+  font-size: clamp(0.6rem, 0.9vw, 0.72rem);
+  color: #ccc;
+  letter-spacing: 0.08em;
+}
+
+/* ===========================================
+   ANIMATIONS
+   =========================================== */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.visible .reveal {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ===========================================
+   RESPONSIVE HEIGHT BREAKPOINTS
+   =========================================== */
+
+@media (max-height: 700px) {
+  .title {
+    font-size: clamp(2.5rem, 8vw, 5rem);
+  }
+  .heading {
+    font-size: clamp(1.25rem, 3.5vw, 2.25rem);
+  }
+  .problemLine {
+    font-size: clamp(1rem, 2.5vw, 1.75rem);
+  }
+  .demoHeading {
+    font-size: clamp(2.5rem, 8vw, 5rem);
+  }
+  .slideContent {
+    gap: clamp(0.75rem, 1.5vh, 1.25rem);
+  }
+  .policies {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-height: 550px) {
+  .title {
+    font-size: clamp(1.75rem, 6vw, 3rem);
+  }
+  .heading {
+    font-size: clamp(1rem, 2.5vw, 1.5rem);
+  }
+  .progressDots {
+    display: none;
+  }
+  .gridBg {
+    display: none;
+  }
+  .slideContent {
+    gap: 0.5rem;
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .title {
+    font-size: clamp(2.5rem, 14vw, 5rem);
+  }
+  .demoHeading {
+    font-size: clamp(2.5rem, 12vw, 5rem);
+  }
+  .problemLine {
+    font-size: clamp(1rem, 5.5vw, 1.75rem);
+  }
+  .flowDiagram {
+    flex-direction: column;
+  }
+  .policies {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    transition-duration: 0.1s;
+    transform: none;
+  }
+}
