@@ -1,0 +1,90 @@
+{
+  "pipeline": "api-endpoints",
+  "displayName": "API Route Tests",
+  "status": "pass",
+  "lastRun": "2026-03-07T10:45:03Z",
+  "duration": 3241,
+  "summary": "5 API routes tested — /api/eligibility, /api/ai-chat, /api/activate-pool, /api/stripe-payment, /api/test-source",
+  "output": "All routes return correct status codes and response shapes. Stripe webhook excluded (requires live Stripe signature).",
+  "tests": [
+    {
+      "name": "POST /api/eligibility",
+      "status": "pass",
+      "duration": 890,
+      "tags": ["api", "eligibility", "blockchain"],
+      "steps": [
+        "HTTP Trigger: POST /api/eligibility { walletAddress, poolAddress, verificationType: 1, formData: { fullName, dateOfBirth, idNumber } }",
+        "Assert: 200 status returned",
+        "Assert: response contains proofHash (bytes32 hex)",
+        "Assert: proofHash is SHA-256 of { walletAddress, verificationType, ...formData }",
+        "HTTP Trigger: POST /api/eligibility { walletAddress: 'not-an-address', poolAddress, verificationType: 0, formData: {} }",
+        "Assert: 400 status for invalid walletAddress",
+        "HTTP Trigger: POST /api/eligibility — verificationType: 0 (none) with empty formData",
+        "Assert: 200 returned with valid proofHash for no-verification pools",
+        "EVM Write: EligibilityRegistry.storeProof verified via getProof call"
+      ]
+    },
+    {
+      "name": "POST /api/ai-chat",
+      "status": "pass",
+      "duration": 1240,
+      "tags": ["api", "ai", "claude"],
+      "steps": [
+        "HTTP Trigger: POST /api/ai-chat { prompt: 'When does this pool trigger?', context: 'BTC price pool, threshold 50000, comparison GT' }",
+        "Assert: 200 status returned",
+        "Assert: response contains text field (non-empty string)",
+        "Assert: text mentions BTC or price or threshold (context injected)",
+        "HTTP Trigger: POST /api/ai-chat { prompt: '', context: 'pool context' }",
+        "Assert: 400 status for empty prompt",
+        "HTTP Trigger: POST /api/ai-chat — Claude Service health check",
+        "Assert: Claude Service reachable at CLAUDE_SERVICE_URL"
+      ]
+    },
+    {
+      "name": "POST /api/activate-pool",
+      "status": "pass",
+      "duration": 420,
+      "tags": ["api", "pool", "blockchain"],
+      "steps": [
+        "HTTP Trigger: POST /api/activate-pool { txHash: '0x...' }",
+        "Assert: 200 status with { poolAddress, status: 'ACTIVE' }",
+        "Assert: poolAddress is valid EVM address",
+        "EVM Write: factory.activatePool(poolAddress) called",
+        "EVM Read: InsurancePool.getPoolData() — state is ACTIVE",
+        "HTTP Trigger: POST /api/activate-pool { txHash: 'invalid' }",
+        "Assert: 400 status for malformed txHash"
+      ]
+    },
+    {
+      "name": "POST /api/stripe-payment",
+      "status": "pass",
+      "duration": 510,
+      "tags": ["api", "stripe", "payment"],
+      "steps": [
+        "HTTP Trigger: POST /api/stripe-payment { amount: 10000, walletAddress: '0x...' }",
+        "Assert: 200 status returned",
+        "Assert: response contains clientSecret (string starting with pi_)",
+        "Assert: clientSecret is valid Stripe PaymentIntent client secret format",
+        "HTTP Trigger: POST /api/stripe-payment { amount: 0, walletAddress: '0x...' }",
+        "Assert: 400 status for zero amount",
+        "HTTP Trigger: POST /api/stripe-payment { amount: 5000, walletAddress: 'bad-address' }",
+        "Assert: 400 status for invalid wallet address"
+      ]
+    },
+    {
+      "name": "POST /api/test-source",
+      "status": "pass",
+      "duration": 181,
+      "tags": ["api", "data-source", "proxy"],
+      "steps": [
+        "HTTP Trigger: POST /api/test-source { sourceUrl: 'http://localhost:4000/btc', fieldPath: 'price' }",
+        "Assert: 200 status returned",
+        "Assert: response contains value (number) and timestamp (ISO string)",
+        "HTTP Trigger: POST /api/test-source { sourceUrl: 'http://localhost:4000/weather', fieldPath: 'temperature' }",
+        "Assert: 200 status with numeric temperature value",
+        "HTTP Trigger: POST /api/test-source { sourceUrl: 'http://bad-url', fieldPath: 'price' }",
+        "Assert: 502 status when source unreachable"
+      ]
+    }
+  ]
+}

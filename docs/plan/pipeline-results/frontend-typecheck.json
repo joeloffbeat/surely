@@ -1,0 +1,8 @@
+{
+  "id": "frontend-typecheck",
+  "name": "TypeScript Check",
+  "status": "pending",
+  "runAt": null,
+  "durationMs": null,
+  "output": null
+}

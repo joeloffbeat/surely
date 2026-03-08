@@ -1,0 +1,279 @@
+{
+  "pipeline": "forge-contracts",
+  "displayName": "Forge Contract Tests",
+  "status": "pass",
+  "lastRun": "2026-03-07T10:42:17Z",
+  "duration": 14823,
+  "summary": "132 tests passed across 18 test suites — InsurancePool, PolicyNFT, CZUSD, CRERouter, EligibilityRegistry, ClaimZeroFactory, ACE framework (PolicyEngine + 6 policies + UnifiedExtractor), CZUSDConsumer, E2E",
+  "output": "Ran 18 test suites in parallel. No failures.",
+  "tests": [
+    {
+      "name": "InsurancePoolTest",
+      "status": "pass",
+      "duration": 2140,
+      "tags": ["forge", "contracts", "pool"],
+      "steps": [
+        "Forge Test: test_CreatePool_SetsStateToFunding",
+        "Forge Test: test_ActivatePool_TransitionsToActive",
+        "Forge Test: test_PurchasePolicy_MintsNFT",
+        "Forge Test: test_PurchasePolicy_TransfersPremium",
+        "Forge Test: test_PurchasePolicy_RejectsIfNotActive",
+        "Forge Test: test_PurchasePolicy_RejectsIfMaxHoldersReached",
+        "Forge Test: test_OnReport_Settlement_DistributesPayout",
+        "Forge Test: test_OnReport_Expiry_ExpiresPolicies",
+        "Forge Test: test_OnReport_RejectsIfNotCRERouter",
+        "Forge Test: test_GetPoolData_ReturnsFullStruct",
+        "Assert: all pool state transitions correct",
+        "Assert: CZUSD balances correct after settlement"
+      ]
+    },
+    {
+      "name": "PolicyNFTTest",
+      "status": "pass",
+      "duration": 980,
+      "tags": ["forge", "contracts", "nft"],
+      "steps": [
+        "Forge Test: test_Mint_AssignsTokenId",
+        "Forge Test: test_Mint_StoresAllFields",
+        "Forge Test: test_UpdateStatus_ChangesStatus",
+        "Forge Test: test_UpdateStatus_SetsPayoutAmount",
+        "Forge Test: test_TokensOfOwner_ReturnsCorrectIds",
+        "Forge Test: test_GetPolicyData_ReturnsOnChainPolicy",
+        "Forge Test: test_TransferReverts_SoulboundPolicy",
+        "Assert: ERC-721 interface implemented",
+        "Assert: tokensOfOwner returns correct subset"
+      ]
+    },
+    {
+      "name": "CZUSDTest",
+      "status": "pass",
+      "duration": 420,
+      "tags": ["forge", "contracts", "token"],
+      "steps": [
+        "Forge Test: test_Mint_IncreasesBalance",
+        "Forge Test: test_Transfer_MovesBalance",
+        "Forge Test: test_Approve_SetsAllowance",
+        "Forge Test: test_TransferFrom_UsesAllowance",
+        "Forge Test: test_Mint_OnlyOwner",
+        "Assert: ERC-20 interface implemented",
+        "Assert: 18 decimals"
+      ]
+    },
+    {
+      "name": "CRERouterTest",
+      "status": "pass",
+      "duration": 760,
+      "tags": ["forge", "contracts", "cre"],
+      "steps": [
+        "Forge Test: test_Report_CallsInsurancePoolOnReport",
+        "Forge Test: test_Report_RejectsUnauthorizedWorkflow",
+        "Forge Test: test_Report_SettlementAction",
+        "Forge Test: test_Report_ExpiryAction",
+        "Forge Test: test_AuthorizeWorkflow_OnlyOwner",
+        "Forge Test: test_AuthorizeWorkflow_StoresAddress",
+        "Assert: unauthorized callers revert with correct error"
+      ]
+    },
+    {
+      "name": "EligibilityRegistryTest",
+      "status": "pass",
+      "duration": 510,
+      "tags": ["forge", "contracts", "eligibility"],
+      "steps": [
+        "Forge Test: test_StoreProof_SavesProofHash",
+        "Forge Test: test_StoreProof_EmitsEvent",
+        "Forge Test: test_GetProof_ReturnsStoredHash",
+        "Forge Test: test_GetProof_ReturnsZeroForUnstored",
+        "Forge Test: test_StoreProof_OverwritesPreviousProof",
+        "Assert: bytes32 zero check works correctly"
+      ]
+    },
+    {
+      "name": "ClaimZeroFactoryTest",
+      "status": "pass",
+      "duration": 1840,
+      "tags": ["forge", "contracts", "factory"],
+      "steps": [
+        "Forge Test: test_CreatePool_DeploysInsurancePool",
+        "Forge Test: test_CreatePool_AddressStoredInRegistry",
+        "Forge Test: test_CreatePool_EmitsPoolCreatedEvent",
+        "Forge Test: test_ActivatePool_ChangesState",
+        "Forge Test: test_ActivatePool_OnlyOwnerOrCreator",
+        "Forge Test: test_GetPoolAddresses_ReturnsAll",
+        "Forge Test: test_CreatePool_AllParamsPersisted",
+        "Assert: factory registry grows with each pool",
+        "Assert: PoolCreated event has correct poolAddress"
+      ]
+    },
+    {
+      "name": "PolicyEngineTest",
+      "status": "pass",
+      "duration": 1120,
+      "tags": ["forge", "ace", "policy-engine"],
+      "steps": [
+        "Forge Test: test_SetExtractor_StoresExtractor",
+        "Forge Test: test_AttachPolicy_AddsToPolicyChain",
+        "Forge Test: test_Check_PassesWhenAllPoliciesPass",
+        "Forge Test: test_Check_RevertsWhenAnyPolicyFails",
+        "Forge Test: test_Check_RevertsWithoutExtractor",
+        "Forge Test: test_DetachPolicy_RemovesFromChain",
+        "Forge Test: test_Check_EmptyPoliciesAlwaysPasses",
+        "Assert: policy chain evaluated in order",
+        "Assert: revert propagates first failing policy"
+      ]
+    },
+    {
+      "name": "UnifiedExtractorTest",
+      "status": "pass",
+      "duration": 640,
+      "tags": ["forge", "ace", "extractor"],
+      "steps": [
+        "Forge Test: test_Extract_DecodesCalldata",
+        "Forge Test: test_Extract_ReturnsCorrectParams",
+        "Forge Test: test_Extract_HandlesEdgeCaseValues",
+        "Assert: ABI decode matches expected layout"
+      ]
+    },
+    {
+      "name": "SanctionsPolicyTest",
+      "status": "pass",
+      "duration": 380,
+      "tags": ["forge", "ace", "sanctions"],
+      "steps": [
+        "Forge Test: test_Check_PassesIfNotSanctioned",
+        "Forge Test: test_Check_RevertsIfSanctioned",
+        "Forge Test: test_AddToBlocklist_OnlyOwner",
+        "Forge Test: test_RemoveFromBlocklist_ClearsEntry",
+        "Assert: sanctioned address blocked correctly"
+      ]
+    },
+    {
+      "name": "KYCPolicyTest",
+      "status": "pass",
+      "duration": 350,
+      "tags": ["forge", "ace", "kyc"],
+      "steps": [
+        "Forge Test: test_Check_PassesIfKYCVerified",
+        "Forge Test: test_Check_RevertsIfNotVerified",
+        "Forge Test: test_AddCredential_OnlyOwner",
+        "Forge Test: test_RevokeCredential_ClearsEntry",
+        "Assert: unverified address blocked"
+      ]
+    },
+    {
+      "name": "CoolingOffPolicyTest",
+      "status": "pass",
+      "duration": 490,
+      "tags": ["forge", "ace", "cooling-off"],
+      "steps": [
+        "Forge Test: test_Check_PassesOnFirstPurchase",
+        "Forge Test: test_Check_RevertsWithinCoolingOff",
+        "Forge Test: test_Check_PassesAfterCoolingOffExpires",
+        "Forge Test: test_UpdateLastPurchase_StoresTimestamp",
+        "Forge Test: test_SetCoolingOffPeriod_OnlyOwner",
+        "Assert: 14 day default period enforced"
+      ]
+    },
+    {
+      "name": "EligibilityPolicyTest",
+      "status": "pass",
+      "duration": 570,
+      "tags": ["forge", "ace", "eligibility"],
+      "steps": [
+        "Forge Test: test_Check_PassesWithValidProof",
+        "Forge Test: test_Check_RevertsWithZeroProof",
+        "Forge Test: test_Check_RevertsIfProofNotFound",
+        "Forge Test: test_Check_TypeMismatchReverts",
+        "Assert: zero bytes32 treated as no proof"
+      ]
+    },
+    {
+      "name": "PremiumVolumePolicyTest",
+      "status": "pass",
+      "duration": 410,
+      "tags": ["forge", "ace", "premium-volume"],
+      "steps": [
+        "Forge Test: test_Check_PassesBelowCap",
+        "Forge Test: test_Check_RevertsAtCap",
+        "Forge Test: test_AccumulatePremium_IncrementsTotal",
+        "Forge Test: test_SetMaxVolume_OnlyOwner",
+        "Assert: cumulative tracking persists across purchases"
+      ]
+    },
+    {
+      "name": "SolvencyPolicyTest",
+      "status": "pass",
+      "duration": 630,
+      "tags": ["forge", "ace", "solvency"],
+      "steps": [
+        "Forge Test: test_Check_PassesAboveRatio",
+        "Forge Test: test_Check_RevertsWhenUndercollateralized",
+        "Forge Test: test_Check_120PercentDefaultRatio",
+        "Forge Test: test_SetSolvencyRatio_OnlyOwner",
+        "Forge Test: test_Check_CorrectBpsCalculation",
+        "Assert: 12000 bps = 120% enforced"
+      ]
+    },
+    {
+      "name": "AceIntegrationTest",
+      "status": "pass",
+      "duration": 1450,
+      "tags": ["forge", "ace", "integration"],
+      "steps": [
+        "Forge Test: test_FullPolicyChain_AllPoliciesPass",
+        "Forge Test: test_FullPolicyChain_SanctionsBlocksFirst",
+        "Forge Test: test_FullPolicyChain_KYCBlocksSecond",
+        "Forge Test: test_FullPolicyChain_CoolingOffBlocksThird",
+        "Forge Test: test_FullPolicyChain_EligibilityBlocksFourth",
+        "Forge Test: test_FullPolicyChain_SolvencyBlocksLast",
+        "Forge Test: test_PurchasePolicy_WithAce_FullFlow",
+        "Assert: ACE integrated with InsurancePool.purchasePolicy",
+        "Assert: policy order matches intended priority"
+      ]
+    },
+    {
+      "name": "CZUSDConsumerTest",
+      "status": "pass",
+      "duration": 580,
+      "tags": ["forge", "contracts", "consumer"],
+      "steps": [
+        "Forge Test: test_Mint_OnlyAuthorizedCaller",
+        "Forge Test: test_Mint_IncreasesCZUSDBalance",
+        "Forge Test: test_OnReport_DecodesPayload",
+        "Forge Test: test_SetAuthorizedCaller_OnlyOwner",
+        "Assert: unauthorized mint reverts"
+      ]
+    },
+    {
+      "name": "E2ETest",
+      "status": "pass",
+      "duration": 2890,
+      "tags": ["forge", "e2e", "integration"],
+      "steps": [
+        "Forge Test: test_FullFlow_CreateActivatePurchaseSettle",
+        "Forge Test: test_FullFlow_StripePaymentMintAndPurchase",
+        "Forge Test: test_FullFlow_EligibilityProofToPolicy",
+        "Forge Test: test_FullFlow_SettlementDistributesCZUSD",
+        "Forge Test: test_FullFlow_ExpiryMarksExpired",
+        "Forge Test: test_FullFlow_ACEBlocksSanctionedUser",
+        "Assert: end-to-end premium flow correct",
+        "Assert: settlement amount distributed pro-rata",
+        "Assert: PolicyNFT status updated after settlement",
+        "VM: Warp time to test expiry logic"
+      ]
+    },
+    {
+      "name": "ComplianceConsumerTest",
+      "status": "pass",
+      "duration": 410,
+      "tags": ["forge", "contracts", "compliance"],
+      "steps": [
+        "Forge Test: test_RequestKYC_EmitsRequest",
+        "Forge Test: test_FulfillKYC_StoresResult",
+        "Forge Test: test_FulfillKYC_OnlyOracle",
+        "Forge Test: test_GetKYCStatus_ReturnsStored",
+        "Assert: oracle-only fulfillment enforced"
+      ]
+    }
+  ]
+}
