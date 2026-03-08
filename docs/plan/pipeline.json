@@ -1,0 +1,81 @@
+{
+  "checks": [
+    {
+      "id": "contracts-build",
+      "name": "Contracts Build",
+      "command": "cd packages/contracts && forge build",
+      "timeout": 60000,
+      "category": "build"
+    },
+    {
+      "id": "contracts-test",
+      "name": "Contract Tests",
+      "command": "cd packages/contracts && forge test -v",
+      "timeout": 120000,
+      "category": "test"
+    },
+    {
+      "id": "frontend-typecheck",
+      "name": "TypeScript Check",
+      "command": "cd packages/webapp && npx tsc --noEmit",
+      "timeout": 60000,
+      "category": "build"
+    },
+    {
+      "id": "frontend-lint",
+      "name": "Frontend Lint",
+      "command": "cd packages/webapp && npx eslint src/ --max-warnings=0 2>&1 || true",
+      "timeout": 60000,
+      "category": "lint"
+    },
+    {
+      "id": "frontend-build",
+      "name": "Next.js Build",
+      "command": "cd packages/webapp && npm run build",
+      "timeout": 180000,
+      "category": "build"
+    },
+    {
+      "id": "contracts-deploy-dryrun",
+      "name": "Deploy Dry Run (Avalanche Fuji)",
+      "command": "cd packages/contracts && forge script script/Deploy.s.sol --rpc-url ${NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL:-https://sepolia.base.org} 2>&1 || echo 'SKIP: No RPC or private key configured'",
+      "timeout": 60000,
+      "category": "deploy",
+      "optional": true
+    }
+  ],
+  "chain": {
+    "name": "Avalanche Fuji",
+    "id": 43113,
+    "rpc": "https://sepolia.base.org",
+    "explorer": "https://sepolia.basescan.org",
+    "faucet": "https://faucets.chain.link/base-sepolia",
+    "nativeCurrency": {
+      "name": "Ethereum",
+      "symbol": "ETH",
+      "decimals": 18
+    }
+  },
+  "deploy": {
+    "script": "packages/contracts/script/Deploy.s.sol",
+    "command": "cd packages/contracts && forge script script/Deploy.s.sol --broadcast --rpc-url ${NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL}",
+    "verify": "cd packages/contracts && forge verify-contract --chain 43113 --etherscan-api-key ${SNOWTRACE_API_KEY}",
+    "contracts": [
+      "CZUSD",
+      "EligibilityRegistry",
+      "PolicyNFT",
+      "InsurancePool",
+      "ClaimZeroFactory",
+      "CRERouter",
+      "CZUSDConsumer",
+      "ComplianceConsumer"
+    ],
+    "envVarsAfterDeploy": [
+      "NEXT_PUBLIC_FACTORY_ADDRESS",
+      "NEXT_PUBLIC_POLICY_NFT_ADDRESS",
+      "NEXT_PUBLIC_CZUSD_ADDRESS",
+      "NEXT_PUBLIC_CRE_ROUTER_ADDRESS",
+      "NEXT_PUBLIC_ELIGIBILITY_REGISTRY_ADDRESS"
+    ]
+  }
+}

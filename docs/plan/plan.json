@@ -1,0 +1,531 @@
+{
+  "app": {
+    "name": "Surely",
+    "description": "Parametric insurance protocol on Chainlink CRE. Insurance pools with custom trigger conditions, multi-source data verification, AI adjudication, and instant on-chain payouts. No claims, no adjusters, no waiting.",
+    "version": "0.1.0",
+    "techStack": {
+      "framework": "Next.js 15 (App Router)",
+      "language": "TypeScript",
+      "auth": "Thirdweb Connect (email, social, WalletConnect)",
+      "ui": "Tailwind CSS + shadcn/ui",
+      "stateManagement": "React Query + React useState",
+      "ai": "Claude Service (app-level AI advisor)",
+      "blockchain": "Foundry (Solidity ^0.8.24), Thirdweb SDK v5, viem",
+      "payments": "Stripe + CZUSD (ERC-20 stablecoin)",
+      "testing": "Foundry (contracts), Playwright (e2e)"
+    }
+  },
+  "modules": [
+    {
+      "id": "pools",
+      "name": "Insurance Pools",
+      "description": "Browse all insurance pools with grid/table view, search, and type filtering",
+      "color": "#6366f1",
+      "icon": "Shield",
+      "counts": {
+        "screens": 1,
+        "endpoints": 0,
+        "tables": 0,
+        "implemented": 1,
+        "planned": 0
+      }
+    },
+    {
+      "id": "pool-detail",
+      "name": "Pool Detail",
+      "description": "View pool parameters, monitoring chart, data sources, agreements, and AI advisor",
+      "color": "#3b82f6",
+      "icon": "BarChart2",
+      "counts": {
+        "screens": 1,
+        "endpoints": 1,
+        "tables": 0,
+        "implemented": 2,
+        "planned": 0
+      }
+    },
+    {
+      "id": "create",
+      "name": "Create Pool",
+      "description": "4-step wizard to deploy a new parametric insurance pool: Sources → Trigger → Agreements → Deploy",
+      "color": "#8b5cf6",
+      "icon": "PlusCircle",
+      "counts": {
+        "screens": 1,
+        "endpoints": 2,
+        "tables": 0,
+        "implemented": 3,
+        "planned": 0
+      }
+    },
+    {
+      "id": "acquire",
+      "name": "Acquire Policy",
+      "description": "3-step flow to purchase a policy: Eligibility → Payment → Confirm",
+      "color": "#f59e0b",
+      "icon": "FileText",
+      "counts": {
+        "screens": 1,
+        "endpoints": 3,
+        "tables": 0,
+        "implemented": 4,
+        "planned": 0
+      }
+    },
+    {
+      "id": "coverage",
+      "name": "My Coverage",
+      "description": "View all policies held by the connected wallet, filter by status",
+      "color": "#10b981",
+      "icon": "Heart",
+      "counts": {
+        "screens": 1,
+        "endpoints": 0,
+        "tables": 0,
+        "implemented": 1,
+        "planned": 0
+      }
+    },
+    {
+      "id": "contracts",
+      "name": "Smart Contracts",
+      "description": "On-chain insurance protocol: SurelyFactory, InsurancePool, PolicyNFT, CZUSD, CRERouter, EligibilityRegistry, ComplianceConsumer + ACE policy framework (PolicyEngine, 6 policies, UnifiedExtractor)",
+      "color": "#f97316",
+      "icon": "FileCode",
+      "counts": {
+        "screens": 0,
+        "endpoints": 0,
+        "tables": 16,
+        "implemented": 16,
+        "planned": 0
+      }
+    },
+    {
+      "id": "cre",
+      "name": "CRE Workflows",
+      "description": "Chainlink Runtime Environment workflows: trigger-monitoring, eligibility-kyc, settlement, payment-fiat",
+      "color": "#ef4444",
+      "icon": "Zap",
+      "counts": {
+        "screens": 0,
+        "endpoints": 0,
+        "tables": 4,
+        "implemented": 4,
+        "planned": 0
+      }
+    }
+  ],
+  "flows": [
+    {
+      "id": "browse-pools",
+      "name": "User Browses Insurance Pools",
+      "trigger": "navigation",
+      "priority": "critical",
+      "module": "pools",
+      "outcome": "User sees all active insurance pools in grid or table view",
+      "tags": ["pools", "browse", "search"],
+      "steps": [
+        {
+          "order": 1,
+          "screen": "pools.list",
+          "description": "User navigates to /policies",
+          "checks": ["Pool grid renders", "Loading state shown while fetching"]
+        },
+        {
+          "order": 2,
+          "screen": "pools.list",
+          "description": "useAllPools() reads factory.getPoolAddresses() on-chain, renders pool cards",
+          "pipelineRef": "forge-contracts",
+          "checks": ["Pool cards show name, type badge, state, premium, payout"]
+        },
+        {
+          "order": 3,
+          "screen": "pools.list",
+          "description": "User can search by name, filter by type (crypto/stablecoin/weather/flight), switch grid/table",
+          "checks": [
+            "Search filters pool cards",
+            "Type filter works",
+            "Table view shows columns"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "view-pool-detail",
+      "name": "User Views Pool Detail",
+      "trigger": "navigation",
+      "priority": "critical",
+      "module": "pool-detail",
+      "outcome": "User sees full pool parameters, monitoring chart, agreements, and can ask AI advisor",
+      "tags": ["pool-detail", "ai-advisor", "monitoring"],
+      "steps": [
+        {
+          "order": 1,
+          "screen": "pool-detail.detail",
+          "description": "User clicks pool card or navigates to /policies/[address]",
+          "pipelineRef": "forge-contracts",
+          "checks": ["Pool name, state badge, and params load from chain"]
+        },
+        {
+          "order": 2,
+          "screen": "pool-detail.detail",
+          "description": "Monitoring chart shows mock time-series for the trigger metric",
+          "checks": [
+            "Chart renders with threshold line",
+            "Candlestick or line mode"
+          ]
+        },
+        {
+          "order": 3,
+          "screen": "pool-detail.detail",
+          "description": "User views Agreements tab with eligibility and settlement agreement text",
+          "checks": ["AgreementViewer renders both agreement texts"]
+        },
+        {
+          "order": 4,
+          "screen": "pool-detail.detail",
+          "description": "User types question in AI advisor, clicks Ask",
+          "endpoint": "pool-detail.ai-chat",
+          "pipelineRef": "api-endpoints",
+          "checks": [
+            "POST /api/ai-chat called with prompt + context",
+            "Response text shown"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "create-pool",
+      "name": "Creator Deploys Insurance Pool",
+      "trigger": "user_action",
+      "priority": "critical",
+      "module": "create",
+      "outcome": "New InsurancePool deployed on Avalanche Fuji via SurelyFactory, pool activated by server wallet",
+      "tags": ["create", "deploy", "factory", "wizard"],
+      "steps": [
+        {
+          "order": 1,
+          "screen": "create.wizard",
+          "description": "Creator selects 2-3 data sources (e.g. CoinGecko, CryptoCompare, Chainlink) and consensus method",
+          "checks": ["Source cards selectable", "Consensus method toggle works"]
+        },
+        {
+          "order": 2,
+          "screen": "create.wizard",
+          "description": "Creator configures trigger: metric, comparison (gt/lt/gte/lte), threshold, duration, cadence",
+          "endpoint": "create.test-source",
+          "pipelineRef": "api-endpoints",
+          "checks": [
+            "All fields validated before Next",
+            "Test source fetches live data"
+          ]
+        },
+        {
+          "order": 3,
+          "screen": "create.wizard",
+          "description": "Creator writes eligibility and settlement agreement text, selects verification type",
+          "endpoint": "pool-detail.ai-chat",
+          "pipelineRef": "api-endpoints",
+          "checks": [
+            "AI generation available for agreement text",
+            "Both agreements non-empty"
+          ]
+        },
+        {
+          "order": 4,
+          "screen": "create.wizard",
+          "description": "Creator sets premium, maxPayout, duration, min/max policyholders, deposits CZUSD underwriting capital",
+          "pipelineRef": "forge-contracts",
+          "checks": [
+            "Deposit amount > 0",
+            "Connected wallet signs createPool() tx"
+          ]
+        },
+        {
+          "order": 5,
+          "endpoint": "create.activate-pool",
+          "description": "POST /api/activate-pool with txHash — server wallet calls factory.activatePool()",
+          "pipelineRef": "api-endpoints",
+          "checks": ["Pool state transitions from FUNDING to ACTIVE"]
+        },
+        {
+          "order": 6,
+          "screen": "create.wizard",
+          "description": "Success — user redirected to /policies/[newPoolAddress]",
+          "checks": ["New pool appears in pool list"]
+        }
+      ]
+    },
+    {
+      "id": "acquire-policy",
+      "name": "User Acquires Insurance Policy",
+      "trigger": "user_action",
+      "priority": "critical",
+      "module": "acquire",
+      "outcome": "Policy NFT minted to user's wallet via InsurancePool.purchasePolicy()",
+      "tags": ["acquire", "policy", "eligibility", "payment"],
+      "steps": [
+        {
+          "order": 1,
+          "screen": "acquire.flow",
+          "description": "User navigates to /policies/[address]/acquire, sees Eligibility step",
+          "pipelineRef": "forge-contracts",
+          "checks": [
+            "Pool name loaded",
+            "Verification type shown (none/identity/flight/employment/property)"
+          ]
+        },
+        {
+          "order": 2,
+          "endpoint": "acquire.eligibility",
+          "description": "User fills eligibility form, POST /api/eligibility — server generates proofHash, stores on EligibilityRegistry",
+          "pipelineRef": "api-endpoints",
+          "checks": [
+            "proofHash returned",
+            "Proof stored on-chain if PRIVATE_KEY set"
+          ]
+        },
+        {
+          "order": 3,
+          "screen": "acquire.flow",
+          "description": "Payment step: user selects CZUSD (on-chain) or Stripe (fiat→CZUSD)",
+          "pipelineRef": "forge-contracts",
+          "checks": [
+            "CZUSD balance shown",
+            "Stripe payment form renders if fiat selected"
+          ]
+        },
+        {
+          "order": 4,
+          "screen": "acquire.flow",
+          "description": "Confirm step: user reviews coverage details, clicks Confirm",
+          "pipelineRef": "forge-contracts",
+          "checks": [
+            "Gas pre-check passes (ETH balance > 0)",
+            "purchasePolicy() tx signed"
+          ]
+        },
+        {
+          "order": 5,
+          "screen": "acquire.flow",
+          "description": "PolicyNFT minted — success state with txHash link",
+          "pipelineRef": "forge-contracts",
+          "checks": ["Confirmed = true", "Link to /coverage"]
+        }
+      ]
+    },
+    {
+      "id": "view-coverage",
+      "name": "User Views Their Policies",
+      "trigger": "navigation",
+      "priority": "high",
+      "module": "coverage",
+      "outcome": "User sees all PolicyNFT tokens they hold with status and payout info",
+      "tags": ["coverage", "policies", "wallet"],
+      "steps": [
+        {
+          "order": 1,
+          "screen": "coverage.list",
+          "description": "User navigates to /coverage with wallet connected",
+          "pipelineRef": "forge-contracts",
+          "checks": [
+            "usePoliciesByHolder(address) fetches token IDs from PolicyNFT"
+          ]
+        },
+        {
+          "order": 2,
+          "screen": "coverage.list",
+          "description": "Each policy card shows pool name, status badge, premium, coverage, expiry",
+          "pipelineRef": "forge-contracts",
+          "checks": [
+            "Filter by status works (all/active/settled/expired/cancelled)"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "czusd-conversion",
+      "name": "User Converts USD to CZUSD",
+      "trigger": "user_action",
+      "priority": "high",
+      "module": "acquire",
+      "outcome": "User receives CZUSD tokens after Stripe payment and server-side mint",
+      "tags": ["czusd", "stripe", "payment", "mint"],
+      "steps": [
+        {
+          "order": 1,
+          "screen": "acquire.flow",
+          "description": "User selects 'Pay with Card' in payment step",
+          "checks": [
+            "Stripe payment form shown",
+            "Amount pre-filled from pool premium"
+          ]
+        },
+        {
+          "order": 2,
+          "endpoint": "acquire.stripe-payment",
+          "description": "POST /api/stripe-payment creates PaymentIntent, returns clientSecret",
+          "pipelineRef": "api-endpoints",
+          "checks": ["clientSecret returned", "Amount in cents correct"]
+        },
+        {
+          "order": 3,
+          "endpoint": "acquire.stripe-webhook",
+          "description": "Stripe sends payment_intent.succeeded webhook, server mints CZUSD to user",
+          "pipelineRef": "forge-contracts",
+          "checks": ["Signature verified", "CZUSD minted on-chain"]
+        }
+      ]
+    }
+  ],
+  "infrastructure": {
+    "blockchain": [
+      {
+        "name": "Avalanche Fuji",
+        "chainId": 43113,
+        "rpc": "env:NEXT_PUBLIC_AVAX_FUJI_RPC_URL",
+        "contracts": [
+          {
+            "name": "SurelyFactory",
+            "address": "0x327f771EE67BeD16C7d8C3646c996e09d0e7566e"
+          },
+          {
+            "name": "PolicyNFT",
+            "address": "0xC6D66927f90D072676792EEa0CBbEcA717419f1A"
+          },
+          {
+            "name": "CZUSD",
+            "address": "0xA8D24aDd4E9CE85e6875251a4a0a796BAa2acfCF"
+          },
+          {
+            "name": "CZUSDConsumer",
+            "address": "0xE6D1361B28713eE61d09D0a574F3Dcc7A49aA6F3"
+          },
+          {
+            "name": "PolicyEngine",
+            "address": "0xcF6031722B1F571E3553F9475AFB370CA6c4af7c"
+          },
+          {
+            "name": "CRERouter",
+            "address": "0xB875b7132aE48fe7b3029C2b74D3E42A5A6A68b4"
+          },
+          {
+            "name": "EligibilityRegistry",
+            "address": "0x2AC06eA51ae0C56ff2d74441206E081EECAE83fF"
+          },
+          {
+            "name": "ComplianceConsumer",
+            "address": "0xF9190C124b9f34d97c5153517FF5c6BD654e0f01"
+          }
+        ]
+      }
+    ],
+    "externalAPIs": [
+      {
+        "name": "Claude Service",
+        "baseUrl": "env:CLAUDE_SERVICE_URL",
+        "auth": "X-API-Key header",
+        "purpose": "AI insurance advisor (sync chat)"
+      },
+      {
+        "name": "Stripe",
+        "baseUrl": "https://api.stripe.com",
+        "auth": "STRIPE_SECRET_KEY",
+        "purpose": "Fiat payment for CZUSD purchase"
+      },
+      {
+        "name": "Mock Server",
+        "baseUrl": "env:MOCK_SERVER_URL (default: http://localhost:4000)",
+        "auth": "none",
+        "purpose": "Test data source for trigger configuration (BTC price, weather, flight status)"
+      }
+    ],
+    "aiServices": [
+      {
+        "name": "Claude Service (Sonnet)",
+        "provider": "Anthropic via Claude Service proxy",
+        "purpose": "Insurance advisor: answers user questions about specific policies",
+        "model": "sonnet"
+      }
+    ],
+    "sharedServices": [
+      {
+        "name": "Thirdweb Connect",
+        "purpose": "Wallet auth (email/social/WalletConnect), contract reads via ThirdwebProvider"
+      },
+      {
+        "name": "Server Wallet (PRIVATE_KEY)",
+        "purpose": "Activates pools and stores eligibility proofs on-chain — server-side only"
+      }
+    ]
+  },
+  "fileStructure": {
+    "packages/webapp/src/app/page.tsx": "shared.redirect",
+    "packages/webapp/src/app/policies/page.tsx": "pools.list",
+    "packages/webapp/src/app/policies/policies-client.tsx": "pools.list-client",
+    "packages/webapp/src/app/policies/[address]/page.tsx": "pool-detail.detail",
+    "packages/webapp/src/app/policies/[address]/detail-client.tsx": "pool-detail.detail-client",
+    "packages/webapp/src/app/policies/[address]/acquire/page.tsx": "acquire.flow",
+    "packages/webapp/src/app/policies/[address]/acquire/acquire-client.tsx": "acquire.flow-client",
+    "packages/webapp/src/app/coverage/page.tsx": "coverage.list",
+    "packages/webapp/src/app/coverage/coverage-client.tsx": "coverage.list-client",
+    "packages/webapp/src/app/create/page.tsx": "create.wizard",
+    "packages/webapp/src/app/create/create-client.tsx": "create.wizard-client",
+    "packages/webapp/src/app/api/activate-pool/route.ts": "create.activate-pool",
+    "packages/webapp/src/app/api/eligibility/route.ts": "acquire.eligibility",
+    "packages/webapp/src/app/api/ai-chat/route.ts": "pool-detail.ai-chat",
+    "packages/webapp/src/app/api/stripe-payment/route.ts": "acquire.stripe-payment",
+    "packages/webapp/src/app/api/stripe-webhook/route.ts": "acquire.stripe-webhook",
+    "packages/webapp/src/app/api/test-source/route.ts": "create.test-source",
+    "packages/webapp/src/components/pool-card-wrapper.tsx": "pools.pool-card",
+    "packages/webapp/src/components/pool-table-wrapper.tsx": "pools.pool-table",
+    "packages/webapp/src/components/policy-card.tsx": "coverage.policy-card",
+    "packages/webapp/src/components/policy-table.tsx": "coverage.policy-table",
+    "packages/webapp/src/components/monitoring-chart.tsx": "pool-detail.monitoring-chart",
+    "packages/webapp/src/components/agreement-viewer.tsx": "pool-detail.agreement-viewer",
+    "packages/webapp/src/components/ai-advisor.tsx": "pool-detail.ai-advisor",
+    "packages/webapp/src/components/create-wizard/step-sources.tsx": "create.step-sources",
+    "packages/webapp/src/components/create-wizard/step-trigger.tsx": "create.step-trigger",
+    "packages/webapp/src/components/create-wizard/step-agreements.tsx": "create.step-agreements",
+    "packages/webapp/src/components/create-wizard/step-deploy.tsx": "create.step-deploy",
+    "packages/webapp/src/components/eligibility-form.tsx": "acquire.eligibility-form",
+    "packages/webapp/src/components/payment-selector.tsx": "acquire.payment-selector",
+    "packages/webapp/src/components/czusd-converter.tsx": "acquire.czusd-converter",
+    "packages/webapp/src/components/stripe-payment-form.tsx": "acquire.stripe-payment-form",
+    "packages/webapp/src/components/deposit-dialog.tsx": "create.deposit-dialog",
+    "packages/webapp/src/components/layout/header.tsx": "shared.header",
+    "packages/webapp/src/components/layout/footer.tsx": "shared.footer",
+    "packages/webapp/src/lib/contracts.ts": "shared.contracts-config",
+    "packages/webapp/src/lib/types.ts": "shared.types",
+    "packages/webapp/src/lib/ai.ts": "shared.ai-client",
+    "packages/webapp/src/lib/czusd.ts": "shared.czusd-utils",
+    "packages/webapp/src/lib/mock-data.ts": "shared.mock-data",
+    "packages/webapp/src/lib/thirdweb.ts": "shared.thirdweb-config",
+    "packages/webapp/src/lib/stripe.ts": "shared.stripe-client",
+    "packages/webapp/src/lib/stripe-server.ts": "shared.stripe-server",
+    "packages/webapp/src/lib/hooks/use-contracts.ts": "shared.use-contracts",
+    "packages/contracts/src/InsurancePool.sol": "contracts.insurance-pool",
+    "packages/contracts/src/ClaimZeroFactory.sol": "contracts.surely-factory",
+    "packages/contracts/src/PolicyNFT.sol": "contracts.policy-nft",
+    "packages/contracts/src/CZUSD.sol": "contracts.czusd",
+    "packages/contracts/src/CZUSDConsumer.sol": "contracts.czusd-consumer",
+    "packages/contracts/src/CRERouter.sol": "contracts.cre-router",
+    "packages/contracts/src/EligibilityRegistry.sol": "contracts.eligibility-registry",
+    "packages/contracts/src/ComplianceConsumer.sol": "contracts.compliance-consumer",
+    "packages/cre/trigger-monitoring/main.ts": "cre.trigger-monitoring",
+    "packages/cre/eligibility-kyc/main.ts": "cre.eligibility-kyc",
+    "packages/cre/settlement/main.ts": "cre.settlement",
+    "packages/cre/payment-fiat/main.ts": "cre.payment-fiat",
+    "packages/contracts/src/ace/PolicyEngine.sol": "contracts.ace-policy-engine",
+    "packages/contracts/src/ace/UnifiedExtractor.sol": "contracts.ace-unified-extractor",
+    "packages/contracts/src/ace/CoolingOffPolicy.sol": "contracts.ace-cooling-off-policy",
+    "packages/contracts/src/ace/EligibilityPolicy.sol": "contracts.ace-eligibility-policy",
+    "packages/contracts/src/ace/KYCPolicy.sol": "contracts.ace-kyc-policy",
+    "packages/contracts/src/ace/PremiumVolumePolicy.sol": "contracts.ace-premium-volume-policy",
+    "packages/contracts/src/ace/SanctionsPolicy.sol": "contracts.ace-sanctions-policy",
+    "packages/contracts/src/ace/SolvencyPolicy.sol": "contracts.ace-solvency-policy",
+    "packages/contracts/src/ace/interfaces/IPolicy.sol": "contracts.ace-interface-policy",
+    "packages/contracts/src/ace/interfaces/IExtractor.sol": "contracts.ace-interface-extractor",
+    "packages/contracts/src/ace/interfaces/IPolicyEngine.sol": "contracts.ace-interface-policy-engine"
+  }
+}

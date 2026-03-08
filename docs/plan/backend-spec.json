@@ -1,0 +1,175 @@
+{
+  "version": "1.0",
+  "generatedAt": "2026-03-07",
+  "baseUrl": "http://localhost:3001",
+  "chain": "Avalanche Fuji (43113)",
+  "endpoints": [
+    {
+      "id": "activate-pool",
+      "method": "POST",
+      "path": "/api/activate-pool",
+      "description": "Server-side wallet calls SurelyFactory.activatePool() to transition a pool from FUNDING to ACTIVE state. Accepts either a poolAddress directly or a txHash to extract it from PoolCreated event logs.",
+      "auth": "none",
+      "request": {
+        "body": {
+          "poolAddress": "string? — pool contract address (use this or txHash)",
+          "txHash": "string? — createPool() transaction hash (extract pool address from PoolCreated event)"
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Pool activated successfully",
+          "example": {
+            "success": true,
+            "txHash": "0xaaaa...aaaa",
+            "poolAddress": "0x1234...5678"
+          }
+        },
+        "400": {
+          "description": "Invalid or missing pool address, or PoolCreated event not found in tx"
+        },
+        "500": {
+          "description": "Server configuration error (missing PRIVATE_KEY) or transaction failure"
+        }
+      },
+      "notes": "Uses server PRIVATE_KEY env var. Factory address hardcoded to 0x327f771EE67BeD16C7d8C3646c996e09d0e7566e. Waits for 1 confirmation before returning."
+    },
+    {
+      "id": "eligibility",
+      "method": "POST",
+      "path": "/api/eligibility",
+      "description": "Verifies user eligibility for an insurance pool, generates a proofHash from user address + verificationType + verificationData, and stores the proof on-chain via EligibilityRegistry.storeProof()",
+      "auth": "none",
+      "request": {
+        "body": {
+          "userAddress": "string — user wallet address",
+          "verificationType": "string — 'none' | 'identity' | 'flight' | 'employment' | 'property'",
+          "verificationData": "Record<string, string> — form fields (e.g. { fullName, dob, idNumber })",
+          "poolAddress": "string — target pool address"
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Eligibility verified and proof stored",
+          "example": {
+            "eligible": true,
+            "proofHash": "0xabcd...1234",
+            "verificationType": "identity",
+            "poolAddress": "0x1234...5678",
+            "txHash": "0xbbbb...bbbb",
+            "timestamp": "2026-03-07T12:00:00.000Z"
+          }
+        },
+        "500": {
+          "description": "On-chain storage failed (falls through to return proofHash without txHash)"
+        }
+      },
+      "notes": "proofHash = keccak256(abi.encodePacked(userAddress, verificationTypeNum, JSON.stringify(verificationData))). If PRIVATE_KEY not set, returns proofHash without on-chain storage. EligibilityRegistry at 0x2AC06eA51ae0C56ff2d74441206E081EECAE83fF."
+    },
+    {
+      "id": "ai-chat",
+      "method": "POST",
+      "path": "/api/ai-chat",
+      "description": "AI insurance advisor powered by Claude Service. Answers questions about a specific pool using injected policy context.",
+      "auth": "none",
+      "request": {
+        "body": {
+          "prompt": "string — user's question",
+          "context": "string — policy parameters and agreement text injected as context"
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "AI response",
+          "example": {
+            "text": "This policy covers BTC price drops below $40,000 for a 12-hour window..."
+          }
+        }
+      },
+      "notes": "Uses chatSync() from Claude Service (model: sonnet). Falls back to static message if Claude Service unavailable. Context is injected as system-level policy info."
+    },
+    {
+      "id": "stripe-payment",
+      "method": "POST",
+      "path": "/api/stripe-payment",
+      "description": "Creates a Stripe PaymentIntent for purchasing CZUSD to fund a policy premium",
+      "auth": "none",
+      "request": {
+        "body": {
+          "amountUsd": "number — USD amount to convert to CZUSD (1–10000)",
+          "userAddress": "string — user wallet address (stored in metadata)"
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "PaymentIntent created",
+          "example": {
+            "clientSecret": "pi_xxx_secret_yyy"
+          }
+        },
+        "400": {
+          "description": "Missing amountUsd or userAddress, or amount out of range (1–10000)"
+        },
+        "500": {
+          "description": "Stripe API error"
+        }
+      },
+      "notes": "Amount converted to cents via Math.round(amountUsd * 100). Metadata includes userAddress for webhook processing."
+    },
+    {
+      "id": "stripe-webhook",
+      "method": "POST",
+      "path": "/api/stripe-webhook",
+      "description": "Handles Stripe webhook events — mints CZUSD to user wallet on successful payment",
+      "auth": "stripe-signature",
+      "request": {
+        "headers": {
+          "stripe-signature": "string — Stripe webhook signature"
+        },
+        "body": "Raw Stripe event payload"
+      },
+      "responses": {
+        "200": {
+          "description": "Webhook processed",
+          "example": { "received": true }
+        },
+        "400": {
+          "description": "Invalid Stripe signature"
+        }
+      },
+      "notes": "Listens for payment_intent.succeeded events. On success, mints CZUSD to userAddress from event metadata. Verified via STRIPE_WEBHOOK_SECRET."
+    },
+    {
+      "id": "test-source",
+      "method": "POST",
+      "path": "/api/test-source",
+      "description": "Proxies a test request to the mock server to validate that a data source is reachable and returning data during pool creation",
+      "auth": "none",
+      "request": {
+        "body": {
+          "source": "string — source display name (e.g. 'CoinGecko API', 'OpenWeather API')"
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Source responded successfully",
+          "example": {
+            "success": true,
+            "data": { "price": 42000 },
+            "latency": 123
+          }
+        },
+        "400": {
+          "description": "Unknown source name"
+        },
+        "502": {
+          "description": "Source returned non-200 status"
+        },
+        "500": {
+          "description": "Could not reach mock server"
+        }
+      },
+      "notes": "Proxies to MOCK_SERVER_URL (default: http://localhost:4000). Source-to-endpoint map: CoinGecko→/api/btc-price/coingecko, OpenWeather→/data/weather, FlightAware→/data/flight-status, etc."
+    }
+  ]
+}
