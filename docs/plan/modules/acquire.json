@@ -1,0 +1,319 @@
+{
+  "id": "acquire",
+  "name": "Acquire Policy",
+  "description": "3-step flow to purchase a parametric insurance policy NFT",
+  "color": "#f59e0b",
+  "icon": "FileText",
+  "screens": [
+    {
+      "id": "acquire.flow",
+      "name": "Acquire Policy Flow",
+      "route": "/policies/[address]/acquire",
+      "status": "implemented",
+      "priority": "critical",
+      "roles": ["policyholder"],
+      "components": ["EligibilityForm", "PaymentSelector", "CzusdConverter", "StripePaymentForm", "DepositDialog"],
+      "description": "3-step wizard: Eligibility (verification form based on pool's verificationType), Payment (CZUSD on-chain or Stripe fiat-to-CZUSD), Confirm (coverage summary + gas pre-check + purchasePolicy tx). Pool name and coverage amount shown throughout.",
+      "ui": {
+        "layout": "centered-card",
+        "sections": [
+          {
+            "type": "header",
+            "title": "Acquire Policy",
+            "subtitle": "{poolName} — {maxPayout} CZUSD coverage"
+          },
+          {
+            "type": "wizard",
+            "steps": [
+              {
+                "id": "eligibility",
+                "label": "Eligibility",
+                "description": "Verify your eligibility based on pool requirements",
+                "fields": [
+                  {
+                    "name": "fullName",
+                    "label": "Full Name",
+                    "type": "text",
+                    "required": true,
+                    "showWhen": { "field": "verificationType", "value": "identity" }
+                  },
+                  {
+                    "name": "dateOfBirth",
+                    "label": "Date of Birth",
+                    "type": "date",
+                    "required": true,
+                    "showWhen": { "field": "verificationType", "value": "identity" }
+                  },
+                  {
+                    "name": "idNumber",
+                    "label": "ID / Passport Number",
+                    "type": "text",
+                    "required": true,
+                    "showWhen": { "field": "verificationType", "value": "identity" }
+                  },
+                  {
+                    "name": "flightNumber",
+                    "label": "Flight Number",
+                    "type": "text",
+                    "required": true,
+                    "placeholder": "e.g. AA1234",
+                    "showWhen": { "field": "verificationType", "value": "flight" }
+                  },
+                  {
+                    "name": "flightDate",
+                    "label": "Flight Date",
+                    "type": "date",
+                    "required": true,
+                    "showWhen": { "field": "verificationType", "value": "flight" }
+                  },
+                  {
+                    "name": "employerName",
+                    "label": "Employer / Organization",
+                    "type": "text",
+                    "required": true,
+                    "showWhen": { "field": "verificationType", "value": "employment" }
+                  },
+                  {
+                    "name": "propertyAddress",
+                    "label": "Property Address",
+                    "type": "textarea",
+                    "required": true,
+                    "showWhen": { "field": "verificationType", "value": "property" }
+                  }
+                ]
+              },
+              {
+                "id": "payment",
+                "label": "Payment",
+                "description": "Pay the policy premium in CZUSD",
+                "component": "PaymentSelector",
+                "fields": [
+                  {
+                    "name": "paymentMethod",
+                    "label": "Payment Method",
+                    "type": "toggle",
+                    "options": ["Pay with CZUSD", "Buy CZUSD with Card"]
+                  },
+                  {
+                    "name": "stripeCard",
+                    "label": "Card Details",
+                    "type": "text",
+                    "placeholder": "Handled by Stripe Elements",
+                    "showWhen": { "field": "paymentMethod", "value": "Buy CZUSD with Card" },
+                    "helperText": "Secure card payment via Stripe. CZUSD minted to your wallet after payment."
+                  }
+                ]
+              },
+              {
+                "id": "confirm",
+                "label": "Confirm",
+                "description": "Review coverage details and confirm purchase",
+                "fields": [
+                  {
+                    "name": "gasAck",
+                    "label": "I have ETH/AVAX for gas fees",
+                    "type": "checkbox",
+                    "required": true,
+                    "helperText": "You need a small amount of AVAX to cover the transaction gas fee"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "states": [
+        {
+          "id": "eligibility-step",
+          "name": "Eligibility Step",
+          "description": "Step 1 — verifying eligibility based on pool's verificationType",
+          "isInitial": true,
+          "mutations": [],
+          "elementDescriptions": {
+            "Step Indicator": "Step 1 of 3 highlighted",
+            "Form Fields": "Shows only fields relevant to pool's verificationType (none/identity/flight/employment/property)",
+            "Next Button": "Disabled until required fields are filled"
+          }
+        },
+        {
+          "id": "eligibility-submitting",
+          "name": "Submitting Eligibility",
+          "description": "POST /api/eligibility in flight",
+          "triggeredBy": ["Next button click on eligibility step"],
+          "mutations": [
+            { "selector": "[data-next-btn]", "op": { "type": "setText", "value": "Verifying..." } }
+          ],
+          "elementDescriptions": {
+            "Next Button": "Shows spinner, disabled"
+          }
+        },
+        {
+          "id": "payment-step",
+          "name": "Payment Step",
+          "description": "Step 2 — paying premium",
+          "triggeredBy": ["/api/eligibility 200 response"],
+          "mutations": [],
+          "elementDescriptions": {
+            "Step Indicator": "Step 2 of 3 highlighted",
+            "CZUSD Balance": "Shows connected wallet's current CZUSD balance",
+            "Pay with Card Toggle": "Expands Stripe Elements card form"
+          }
+        },
+        {
+          "id": "confirm-step",
+          "name": "Confirm Step",
+          "description": "Step 3 — final review and on-chain purchase",
+          "triggeredBy": ["Payment complete or CZUSD balance sufficient"],
+          "mutations": [],
+          "elementDescriptions": {
+            "Coverage Summary": "Pool name, premium paid, max payout, policy expiry date",
+            "Gas Warning": "Red warning if AVAX balance < 0.001",
+            "Confirm Button": "Disabled if gas pre-check fails"
+          }
+        },
+        {
+          "id": "confirming-tx",
+          "name": "Transaction Confirming",
+          "description": "purchasePolicy() tx submitted, awaiting confirmation",
+          "triggeredBy": ["Confirm Purchase button click"],
+          "mutations": [
+            { "selector": "[data-confirm-btn]", "op": { "type": "setText", "value": "Confirming..." } }
+          ],
+          "elementDescriptions": {
+            "Confirm Button": "Spinner, disabled — wallet signing dialog open"
+          }
+        },
+        {
+          "id": "success",
+          "name": "Policy Purchased",
+          "description": "PolicyNFT minted to wallet",
+          "triggeredBy": ["purchasePolicy() tx confirmed"],
+          "mutations": [],
+          "elementDescriptions": {
+            "Success State": "Green checkmark, policy tokenId, txHash link to explorer, View My Coverage button"
+          }
+        }
+      ],
+      "appFlows": [
+        {
+          "id": "acquire-policy.eligibility",
+          "name": "Submit eligibility verification",
+          "trigger": "User fills eligibility form and clicks Next",
+          "priority": "critical",
+          "steps": [
+            { "layer": "ui", "description": "EligibilityForm collects fields based on pool's verificationType (none/identity/flight/employment/property)" },
+            { "layer": "api", "description": "POST /api/eligibility with { walletAddress, poolAddress, verificationType, formData } — generates SHA-256 proofHash", "pipelineRef": "api-endpoints" },
+            { "layer": "blockchain", "description": "Server wallet calls EligibilityRegistry.storeProof(user, verificationType, proofHash) on Avalanche Fuji", "pipelineRef": "forge-contracts" },
+            { "layer": "ui", "description": "proofHash returned to client, stored in component state for Step 3" }
+          ],
+          "outcome": "proofHash stored on EligibilityRegistry, user proceeds to Payment step"
+        },
+        {
+          "id": "acquire-policy.payment-czusd",
+          "name": "Pay with existing CZUSD",
+          "trigger": "User selects 'Pay with CZUSD' and clicks Next in payment step",
+          "priority": "critical",
+          "steps": [
+            { "layer": "blockchain", "description": "useBalance() reads connected wallet's CZUSD balance from CZUSD.balanceOf(address)", "pipelineRef": "forge-contracts" },
+            { "layer": "ui", "description": "If balance < premium, shows 'Insufficient CZUSD' warning and Buy with Card option" },
+            { "layer": "ui", "description": "If balance >= premium, advance to Confirm step" }
+          ],
+          "outcome": "User has verified CZUSD balance and is ready to confirm purchase"
+        },
+        {
+          "id": "acquire-policy.payment-stripe",
+          "name": "Buy CZUSD via Stripe then pay",
+          "trigger": "User selects 'Buy CZUSD with Card' and completes Stripe payment",
+          "priority": "high",
+          "steps": [
+            { "layer": "api", "description": "POST /api/stripe-payment with { amount, walletAddress } — creates Stripe PaymentIntent, returns clientSecret", "pipelineRef": "api-endpoints" },
+            { "layer": "external", "description": "Stripe Elements confirms card payment using clientSecret" },
+            { "layer": "api", "description": "Stripe sends payment_intent.succeeded webhook to POST /api/stripe-webhook", "pipelineRef": "api-endpoints" },
+            { "layer": "blockchain", "description": "Server wallet calls CZUSDConsumer to mint equivalent CZUSD to user's wallet", "pipelineRef": "forge-contracts" },
+            { "layer": "ui", "description": "CZUSD balance updates, user proceeds to Confirm step" }
+          ],
+          "outcome": "CZUSD minted to wallet, user can now pay premium"
+        },
+        {
+          "id": "acquire-policy.confirm",
+          "name": "Confirm purchase on-chain",
+          "trigger": "User clicks Confirm Purchase on step 3",
+          "priority": "critical",
+          "steps": [
+            { "layer": "ui", "description": "Gas pre-check: useBalance() reads native AVAX balance — warns if < 0.001 AVAX" },
+            { "layer": "blockchain", "description": "CZUSD.approve(poolAddress, premium) — user signs approval tx to allow pool to pull premium", "pipelineRef": "forge-contracts" },
+            { "layer": "blockchain", "description": "InsurancePool.purchasePolicy(proofHash) — ACE checks run (sanctions, KYC, cooling-off, solvency), PolicyNFT minted", "pipelineRef": "forge-contracts" },
+            { "layer": "ui", "description": "Success state shown with tokenId, txHash explorer link, View Coverage button" }
+          ],
+          "outcome": "PolicyNFT minted to user's wallet — active parametric insurance coverage"
+        }
+      ]
+    }
+  ],
+  "apiEndpoints": [
+    {
+      "id": "acquire.eligibility",
+      "method": "POST",
+      "path": "/api/eligibility",
+      "description": "Generates proofHash from eligibility form data and stores it on EligibilityRegistry via server wallet",
+      "auth": false,
+      "roles": [],
+      "request": { "walletAddress": "string", "poolAddress": "string", "verificationType": "number (0-4)", "formData": "object — varies by type" },
+      "response": { "proofHash": "bytes32 hex string" },
+      "serverFlow": [
+        { "order": 1, "layer": "validation", "description": "Validate walletAddress, poolAddress are valid checksummed addresses" },
+        { "order": 2, "layer": "transform", "description": "SHA-256 hash of JSON.stringify({ walletAddress, verificationType, ...formData }) → proofHash bytes32" },
+        { "order": 3, "layer": "db", "description": "Server wallet sends tx: EligibilityRegistry.storeProof(walletAddress, verificationType, proofHash)" },
+        { "order": 4, "layer": "response", "description": "Return { proofHash } — client stores for purchasePolicy() call" }
+      ],
+      "errorResponses": [
+        { "status": 400, "description": "Invalid address format", "when": "walletAddress or poolAddress not valid EVM address" },
+        { "status": 500, "description": "On-chain write failed", "when": "Server wallet tx reverted or RPC unreachable" }
+      ],
+      "calledBy": ["acquire.flow"]
+    },
+    {
+      "id": "acquire.stripe-payment",
+      "method": "POST",
+      "path": "/api/stripe-payment",
+      "description": "Creates Stripe PaymentIntent for CZUSD purchase. Amount in USD cents = premium amount.",
+      "auth": false,
+      "roles": [],
+      "request": { "amount": "number — USD cents", "walletAddress": "string" },
+      "response": { "clientSecret": "string — Stripe PaymentIntent client secret" },
+      "serverFlow": [
+        { "order": 1, "layer": "validation", "description": "Validate amount > 0 and walletAddress is valid address" },
+        { "order": 2, "layer": "external", "description": "stripe.paymentIntents.create({ amount, currency: 'usd', metadata: { walletAddress } })" },
+        { "order": 3, "layer": "response", "description": "Return { clientSecret } to frontend Stripe Elements" }
+      ],
+      "errorResponses": [
+        { "status": 400, "description": "Invalid amount or address", "when": "amount <= 0 or address invalid" },
+        { "status": 502, "description": "Stripe API error", "when": "Stripe returns error response" }
+      ],
+      "calledBy": ["acquire.flow"]
+    },
+    {
+      "id": "acquire.stripe-webhook",
+      "method": "POST",
+      "path": "/api/stripe-webhook",
+      "description": "Stripe webhook handler. On payment_intent.succeeded: mints CZUSD to user wallet.",
+      "auth": false,
+      "roles": [],
+      "request": { "body": "raw Stripe webhook body", "stripe-signature": "header — Stripe webhook signature" },
+      "response": { "received": "true" },
+      "serverFlow": [
+        { "order": 1, "layer": "middleware", "description": "stripe.webhooks.constructEvent(body, signature, STRIPE_WEBHOOK_SECRET) — rejects if signature invalid" },
+        { "order": 2, "layer": "validation", "description": "Check event.type === 'payment_intent.succeeded'" },
+        { "order": 3, "layer": "db", "description": "Extract walletAddress from event.data.metadata, compute CZUSD amount from event.data.amount" },
+        { "order": 4, "layer": "external", "description": "Server wallet calls CZUSDConsumer.mint(walletAddress, amount) to issue CZUSD" },
+        { "order": 5, "layer": "response", "description": "Return { received: true } — Stripe expects 200 quickly" }
+      ],
+      "errorResponses": [
+        { "status": 400, "description": "Invalid webhook signature", "when": "Stripe signature verification fails" },
+        { "status": 500, "description": "Mint failed", "when": "CZUSDConsumer.mint() reverts" }
+      ],
+      "calledBy": []
+    }
+  ],
+  "dbTables": []
+}

@@ -1,0 +1,113 @@
+{
+  "id": "coverage",
+  "name": "My Coverage",
+  "description": "View all PolicyNFT tokens held by the connected wallet, filtered by status",
+  "color": "#10b981",
+  "icon": "Heart",
+  "screens": [
+    {
+      "id": "coverage.list",
+      "name": "My Coverage",
+      "route": "/coverage",
+      "status": "implemented",
+      "priority": "high",
+      "roles": ["policyholder"],
+      "components": ["PolicyCard", "PolicyTable"],
+      "description": "Connected wallet's PolicyNFT tokens listed as cards or table. Shows pool name, status badge (ACTIVE/SETTLED/EXPIRED/CANCELLED), premium paid, coverage amount, expiry date, and payout amount if settled. Filter tabs for status. Unauthenticated state shows wallet connect prompt.",
+      "ui": {
+        "layout": "page-with-header",
+        "sections": [
+          {
+            "type": "header",
+            "title": "My Coverage",
+            "subtitle": "Your active and historical insurance policies"
+          },
+          {
+            "type": "data-table",
+            "columns": [
+              { "key": "poolName", "label": "Pool", "type": "text" },
+              { "key": "status", "label": "Status", "type": "badge" },
+              { "key": "premium", "label": "Premium", "type": "currency" },
+              { "key": "coverage", "label": "Coverage", "type": "currency" },
+              { "key": "expiry", "label": "Expires", "type": "date", "hiddenOn": "mobile" },
+              { "key": "payout", "label": "Payout", "type": "currency", "hiddenOn": "mobile" }
+            ],
+            "filters": [
+              { "key": "status", "label": "Status", "type": "select", "options": ["All", "ACTIVE", "SETTLED", "EXPIRED", "CANCELLED"] }
+            ],
+            "emptyMessage": "No policies found. Browse pools to acquire coverage."
+          }
+        ]
+      },
+      "states": [
+        {
+          "id": "unauthenticated",
+          "name": "Not Connected",
+          "description": "Wallet not connected — prompt to connect",
+          "isInitial": true,
+          "mutations": [
+            { "selector": "[data-policy-list]", "op": { "type": "hide" } },
+            { "selector": "[data-connect-prompt]", "op": { "type": "show" } }
+          ],
+          "elementDescriptions": {
+            "Connect Prompt": "Card with 'Connect wallet to view your coverage' + connect button"
+          }
+        },
+        {
+          "id": "loading",
+          "name": "Loading Policies",
+          "description": "Fetching PolicyNFT tokens for connected wallet",
+          "triggeredBy": ["Wallet connected"],
+          "mutations": [
+            { "selector": "[data-connect-prompt]", "op": { "type": "hide" } },
+            { "selector": "[data-policy-list]", "op": { "type": "show" } },
+            { "selector": "[data-policy-list]", "op": { "type": "addClass", "classes": "opacity-50" } }
+          ],
+          "elementDescriptions": {
+            "Policy List": "Skeleton rows while fetching token IDs and policy data"
+          }
+        },
+        {
+          "id": "loaded",
+          "name": "Policies Loaded",
+          "description": "All policies visible with live on-chain status",
+          "triggeredBy": ["usePoliciesByHolder resolves"],
+          "mutations": [
+            { "selector": "[data-policy-list]", "op": { "type": "removeClass", "classes": "opacity-50" } }
+          ],
+          "elementDescriptions": {
+            "Policy Cards": "ACTIVE = green badge, SETTLED = teal badge with payout amount, EXPIRED = grey badge, CANCELLED = red badge",
+            "Filter Tabs": "Counts update to reflect actual status distribution"
+          }
+        },
+        {
+          "id": "empty",
+          "name": "No Policies",
+          "description": "Wallet has no PolicyNFTs",
+          "triggeredBy": ["usePoliciesByHolder returns empty array"],
+          "mutations": [],
+          "elementDescriptions": {
+            "Empty State": "Message + Browse Pools CTA button"
+          }
+        }
+      ],
+      "appFlows": [
+        {
+          "id": "view-coverage.load",
+          "name": "Load policies for connected wallet",
+          "trigger": "User navigates to /coverage with wallet connected",
+          "priority": "high",
+          "steps": [
+            { "layer": "blockchain", "description": "usePoliciesByHolder(address) calls PolicyNFT.tokensOfOwner(address) — returns uint256[] of token IDs", "pipelineRef": "forge-contracts" },
+            { "layer": "blockchain", "description": "usePolicyData(tokenId) calls PolicyNFT.getPolicyData(tokenId) — returns OnChainPolicy struct with status, premium, coverage, expiry, payoutAmount", "pipelineRef": "forge-contracts" },
+            { "layer": "blockchain", "description": "usePoolName(policy.pool) reads InsurancePool.name via getPoolData() — renders pool name on each card", "pipelineRef": "forge-contracts" },
+            { "layer": "ui", "description": "Policy cards rendered with status badge, premium, coverage, expiry date. SETTLED policies also show payoutAmount." }
+          ],
+          "outcome": "User sees all their insurance policies with live on-chain status"
+        }
+      ]
+    }
+  ],
+  "apiEndpoints": [],
+  "dbTables": []
+}

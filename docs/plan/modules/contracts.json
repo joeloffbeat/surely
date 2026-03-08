@@ -1,0 +1,240 @@
+{
+  "id": "contracts",
+  "name": "Smart Contracts",
+  "description": "On-chain parametric insurance protocol deployed on Avalanche Fuji",
+  "color": "#f97316",
+  "icon": "FileCode",
+  "screens": [],
+  "apiEndpoints": [],
+  "dbTables": [
+    {
+      "id": "contracts.surely-factory",
+      "name": "ClaimZeroFactory (SurelyFactory)",
+      "description": "Factory that deploys InsurancePool instances. createPool() deploys a new pool; activatePool() transitions it from FUNDING to ACTIVE. Maintains a registry of all pool addresses. Address: 0x327f771EE67BeD16C7d8C3646c996e09d0e7566e",
+      "columns": [
+        { "name": "address", "type": "address — deployed pool address", "primary": true },
+        { "name": "name", "type": "string", "nullable": false },
+        { "name": "description", "type": "string", "nullable": false },
+        { "name": "chain", "type": "Avalanche Fuji (43113)", "nullable": false },
+        { "name": "status", "type": "enum(FUNDING, ACTIVE, SETTLED, EXPIRED)", "nullable": false }
+      ],
+      "relations": [
+        { "table": "contracts.insurance-pool", "column": "address", "type": "one-to-many" }
+      ]
+    },
+    {
+      "id": "contracts.insurance-pool",
+      "name": "InsurancePool",
+      "description": "Each pool is a separate contract deployed by SurelyFactory. Manages pool state (FUNDING→ACTIVE→SETTLED/EXPIRED), holds underwriting capital in CZUSD, mints PolicyNFTs on purchasePolicy(), settles payouts via CRERouter reports. Address: deployed per pool by factory",
+      "columns": [
+        { "name": "poolAddress", "type": "address — this contract's address", "primary": true },
+        { "name": "state", "type": "enum(FUNDING=0, ACTIVE=1, SETTLED=2, EXPIRED=3)", "nullable": false },
+        { "name": "premium", "type": "uint256 — CZUSD amount (18 decimals)", "nullable": false },
+        { "name": "maxPayout", "type": "uint256 — max CZUSD per policyholder", "nullable": false },
+        { "name": "duration", "type": "uint256 — seconds", "nullable": false },
+        { "name": "cadence", "type": "uint256 — seconds between CRE checks", "nullable": false },
+        { "name": "threshold", "type": "int256 — trigger threshold value", "nullable": false },
+        { "name": "comparison", "type": "enum(GT, LT, GTE, LTE, EQ)", "nullable": false },
+        { "name": "minHolders", "type": "uint256", "nullable": false },
+        { "name": "maxHolders", "type": "uint256", "nullable": false },
+        { "name": "currentHolders", "type": "uint256", "nullable": false },
+        { "name": "eligibilityAgreementHash", "type": "bytes32 — keccak256 of agreement text", "nullable": false },
+        { "name": "settlementAgreementHash", "type": "bytes32 — keccak256 of agreement text", "nullable": false },
+        { "name": "verificationType", "type": "enum(NONE=0, IDENTITY=1, FLIGHT=2, EMPLOYMENT=3, PROPERTY=4)", "nullable": false },
+        { "name": "totalUnderwriting", "type": "uint256 — CZUSD deposited by creator", "nullable": false }
+      ],
+      "relations": [
+        { "table": "contracts.policy-nft", "column": "pool", "type": "one-to-many" },
+        { "table": "contracts.czusd", "column": "address", "type": "many-to-one" },
+        { "table": "contracts.cre-router", "column": "address", "type": "many-to-one" }
+      ]
+    },
+    {
+      "id": "contracts.policy-nft",
+      "name": "PolicyNFT",
+      "description": "ERC-721 NFT representing an insurance policy. Each token holds the full policy state. Address: 0xC6D66927f90D072676792EEa0CBbEcA717419f1A",
+      "columns": [
+        { "name": "tokenId", "type": "uint256 — ERC-721 token ID", "primary": true },
+        { "name": "holder", "type": "address — policyholder", "nullable": false },
+        { "name": "pool", "type": "address — InsurancePool contract", "nullable": false },
+        { "name": "premium", "type": "uint256 — CZUSD paid", "nullable": false },
+        { "name": "coverage", "type": "uint256 — maxPayout at purchase time", "nullable": false },
+        { "name": "purchaseTimestamp", "type": "uint256", "nullable": false },
+        { "name": "expiryTimestamp", "type": "uint256", "nullable": false },
+        { "name": "status", "type": "enum(ACTIVE=0, SETTLED=1, EXPIRED=2, CANCELLED=3)", "nullable": false },
+        { "name": "payoutAmount", "type": "uint256 — CZUSD paid out (0 if not settled)", "nullable": false },
+        { "name": "eligibilityProofHash", "type": "bytes32 — proof from EligibilityRegistry", "nullable": false }
+      ],
+      "relations": [
+        { "table": "contracts.insurance-pool", "column": "pool", "type": "many-to-one" }
+      ]
+    },
+    {
+      "id": "contracts.czusd",
+      "name": "CZUSD",
+      "description": "ERC-20 stablecoin used for premiums and payouts. 1 CZUSD = 1 USD. Minted by CZUSDConsumer after Stripe payments. Address: 0xA8D24aDd4E9CE85e6875251a4a0a796BAa2acfCF",
+      "columns": [
+        { "name": "holder", "type": "address", "primary": true },
+        { "name": "balance", "type": "uint256 — 18 decimals", "nullable": false },
+        { "name": "allowance", "type": "mapping(address => uint256)", "nullable": true },
+        { "name": "totalSupply", "type": "uint256", "nullable": false }
+      ],
+      "relations": []
+    },
+    {
+      "id": "contracts.czusd-consumer",
+      "name": "CZUSDConsumer",
+      "description": "Chainlink consumer that mints CZUSD to user wallets after off-chain payment verification. Called by CRE payment-fiat workflow or server wallet after Stripe webhook. Address: 0xE6D1361B28713eE61d09D0a574F3Dcc7A49aA6F3",
+      "columns": [
+        { "name": "mintedTo", "type": "address — recipient of minted CZUSD", "primary": true },
+        { "name": "amount", "type": "uint256 — CZUSD amount (18 decimals)", "nullable": false },
+        { "name": "czusdToken", "type": "address — CZUSD contract reference", "nullable": false }
+      ],
+      "relations": [
+        { "table": "contracts.czusd", "column": "holder", "type": "many-to-one" }
+      ]
+    },
+    {
+      "id": "contracts.cre-router",
+      "name": "CRERouter",
+      "description": "On-chain entry point for CRE workflow results. Receives trigger data from Chainlink CRE workflows and forwards settlement/expiry reports to InsurancePool.onReport(). Address: 0xB875b7132aE48fe7b3029C2b74D3E42A5A6A68b4",
+      "columns": [
+        { "name": "poolAddress", "type": "address — pool being reported on", "primary": true },
+        { "name": "action", "type": "enum(SETTLEMENT=1, EXPIRY=2)", "nullable": false },
+        { "name": "settlementAmount", "type": "uint256 — CZUSD per policyholder", "nullable": false },
+        { "name": "reportedAt", "type": "uint256 — block timestamp", "nullable": false },
+        { "name": "authorizedWorkflow", "type": "address — CRE workflow allowed to report", "nullable": false }
+      ],
+      "relations": [
+        { "table": "contracts.insurance-pool", "column": "poolAddress", "type": "many-to-one" }
+      ]
+    },
+    {
+      "id": "contracts.eligibility-registry",
+      "name": "EligibilityRegistry",
+      "description": "Registry of eligibility proofs. storeProof() called by server wallet after eligibility verification. getProof() read by InsurancePool during purchasePolicy(). Address: 0x2AC06eA51ae0C56ff2d74441206E081EECAE83fF",
+      "columns": [
+        { "name": "user", "type": "address — policyholder", "primary": true },
+        { "name": "verificationType", "type": "uint8 — 0=NONE 1=IDENTITY 2=FLIGHT 3=EMPLOYMENT 4=PROPERTY", "nullable": false },
+        { "name": "proofHash", "type": "bytes32 — SHA-256 of { walletAddress, verificationType, formData }", "nullable": false },
+        { "name": "storedAt", "type": "uint256 — block timestamp", "nullable": true }
+      ],
+      "relations": [
+        { "table": "contracts.insurance-pool", "column": "poolAddress", "type": "many-to-one" }
+      ]
+    },
+    {
+      "id": "contracts.compliance-consumer",
+      "name": "ComplianceConsumer",
+      "description": "Chainlink consumer for compliance/KYC checks. Used by eligibility-kyc CRE workflow to write compliance results on-chain. Address: 0xF9190C124b9f34d97c5153517FF5c6BD654e0f01",
+      "columns": [
+        { "name": "requestId", "type": "bytes32 — Chainlink request ID", "primary": true },
+        { "name": "user", "type": "address", "nullable": false },
+        { "name": "kycStatus", "type": "bool", "nullable": false },
+        { "name": "sanctionsClean", "type": "bool", "nullable": false }
+      ],
+      "relations": []
+    },
+    {
+      "id": "contracts.ace-policy-engine",
+      "name": "PolicyEngine (ACE)",
+      "description": "Autonomous Compliance Engine — pluggable policy framework. Maps function selectors to extractor + policy chains. Owner attaches IPolicy implementations and an IExtractor per selector. All attached policies must pass (all-or-nothing) before a restricted function executes. Address: 0xcF6031722B1F571E3553F9475AFB370CA6c4af7c",
+      "columns": [
+        { "name": "selector", "type": "bytes4 — function selector being gated", "primary": true },
+        { "name": "extractor", "type": "address — IExtractor implementation", "nullable": false },
+        { "name": "policies", "type": "address[] — ordered list of IPolicy contracts", "nullable": false },
+        { "name": "owner", "type": "address — can add/remove policies", "nullable": false }
+      ],
+      "relations": [
+        { "table": "contracts.ace-unified-extractor", "column": "selector", "type": "one-to-one" },
+        { "table": "contracts.ace-cooling-off-policy", "column": "selector", "type": "one-to-many" },
+        { "table": "contracts.ace-eligibility-policy", "column": "selector", "type": "one-to-many" },
+        { "table": "contracts.ace-kyc-policy", "column": "selector", "type": "one-to-many" },
+        { "table": "contracts.ace-premium-volume-policy", "column": "selector", "type": "one-to-many" },
+        { "table": "contracts.ace-sanctions-policy", "column": "selector", "type": "one-to-many" },
+        { "table": "contracts.ace-solvency-policy", "column": "selector", "type": "one-to-many" }
+      ]
+    },
+    {
+      "id": "contracts.ace-unified-extractor",
+      "name": "UnifiedExtractor (ACE)",
+      "description": "IExtractor implementation that decodes CZUSDConsumer.onReport(bytes) calldata into structured parameters for downstream policy evaluation. Status: implemented (undeployed — composed with PolicyEngine at runtime).",
+      "columns": [
+        { "name": "selector", "type": "bytes4 — function selector this extractor handles", "primary": true },
+        { "name": "decodedParams", "type": "bytes — ABI-decoded calldata for policy evaluation", "nullable": false }
+      ],
+      "relations": [
+        { "table": "contracts.ace-policy-engine", "column": "selector", "type": "many-to-one" }
+      ]
+    },
+    {
+      "id": "contracts.ace-cooling-off-policy",
+      "name": "CoolingOffPolicy (ACE)",
+      "description": "IPolicy that enforces a cooling-off period (default 14 days) between policy purchases. Prevents immediate re-entry after a settlement event. Status: implemented.",
+      "columns": [
+        { "name": "user", "type": "address", "primary": true },
+        { "name": "lastPurchaseTimestamp", "type": "uint256 — block.timestamp of last purchasePolicy()", "nullable": false },
+        { "name": "coolingOffPeriod", "type": "uint256 — seconds (default 14 days = 1209600)", "nullable": false }
+      ],
+      "relations": []
+    },
+    {
+      "id": "contracts.ace-eligibility-policy",
+      "name": "EligibilityPolicy (ACE)",
+      "description": "IPolicy that gates purchasePolicy() on having a valid proof in EligibilityRegistry. Reads getProof(user, verificationType) — rejects if proof is zero bytes32. Status: implemented.",
+      "columns": [
+        { "name": "user", "type": "address", "primary": true },
+        { "name": "verificationType", "type": "uint8", "nullable": false },
+        { "name": "proofHash", "type": "bytes32 — must be non-zero", "nullable": false }
+      ],
+      "relations": [
+        { "table": "contracts.eligibility-registry", "column": "user", "type": "many-to-one" }
+      ]
+    },
+    {
+      "id": "contracts.ace-kyc-policy",
+      "name": "KYCPolicy (ACE)",
+      "description": "IPolicy that maintains an owner-controlled allowlist of KYC-verified addresses. Rejects callers not in credentials mapping. Status: implemented.",
+      "columns": [
+        { "name": "user", "type": "address", "primary": true },
+        { "name": "kycVerified", "type": "bool — true if KYC passed", "nullable": false }
+      ],
+      "relations": []
+    },
+    {
+      "id": "contracts.ace-premium-volume-policy",
+      "name": "PremiumVolumePolicy (ACE)",
+      "description": "IPolicy that caps total premium volume a single address can accumulate. Prevents whale concentration risk in a pool. Status: implemented.",
+      "columns": [
+        { "name": "user", "type": "address", "primary": true },
+        { "name": "totalPremiumPaid", "type": "uint256 — cumulative CZUSD premium spent", "nullable": false },
+        { "name": "maxAllowedVolume", "type": "uint256 — owner-set cap", "nullable": false }
+      ],
+      "relations": []
+    },
+    {
+      "id": "contracts.ace-sanctions-policy",
+      "name": "SanctionsPolicy (ACE)",
+      "description": "IPolicy that maintains an owner-controlled sanctions blocklist. Rejects callers on the sanctions list. Status: implemented.",
+      "columns": [
+        { "name": "user", "type": "address", "primary": true },
+        { "name": "sanctioned", "type": "bool — true if on blocklist", "nullable": false }
+      ],
+      "relations": []
+    },
+    {
+      "id": "contracts.ace-solvency-policy",
+      "name": "SolvencyPolicy (ACE)",
+      "description": "IPolicy that enforces a minimum solvency ratio (default 120% = 12000 bps) — total underwritten capital must remain above the threshold relative to total coverage obligations. Status: implemented.",
+      "columns": [
+        { "name": "poolAddress", "type": "address — pool being checked", "primary": true },
+        { "name": "solvencyRatioBps", "type": "uint256 — min ratio in basis points (default 12000 = 120%)", "nullable": false },
+        { "name": "totalUnderwriting", "type": "uint256 — CZUSD in pool", "nullable": false },
+        { "name": "totalCoverageObligations", "type": "uint256 — sum of all maxPayout * currentHolders", "nullable": false }
+      ],
+      "relations": [
+        { "table": "contracts.insurance-pool", "column": "poolAddress", "type": "many-to-one" }
+      ]
+    }
+  ]
+}

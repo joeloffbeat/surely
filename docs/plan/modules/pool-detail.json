@@ -1,0 +1,255 @@
+{
+  "id": "pool-detail",
+  "name": "Pool Detail",
+  "description": "Full pool view: params, trigger monitoring chart, data sources, agreements, AI advisor",
+  "color": "#3b82f6",
+  "icon": "BarChart2",
+  "screens": [
+    {
+      "id": "pool-detail.detail",
+      "name": "Pool Detail Page",
+      "route": "/policies/[address]",
+      "status": "implemented",
+      "priority": "critical",
+      "roles": [],
+      "components": ["MonitoringChart", "AgreementViewer", "AiAdvisor"],
+      "description": "Tabbed pool view. Header: pool name, state badge (FUNDING/ACTIVE/SETTLED/EXPIRED), Acquire Policy CTA. Tabs: Overview (trigger params + monitoring chart), Sources (data source cards with live status), Agreements (eligibility + settlement text), AI Advisor (Claude-powered Q&A about the pool).",
+      "ui": {
+        "layout": "tabbed",
+        "sections": [
+          {
+            "type": "header",
+            "title": "{poolName}",
+            "subtitle": "Pool address · State badge",
+            "actions": [
+              {
+                "label": "Acquire Policy",
+                "icon": "ShieldPlus",
+                "variant": "primary",
+                "action": "navigate",
+                "target": "/policies/[address]/acquire",
+                "description": "Disabled when pool state != ACTIVE"
+              }
+            ]
+          },
+          {
+            "type": "tabs",
+            "tabs": [
+              {
+                "id": "overview",
+                "label": "Overview",
+                "content": [
+                  {
+                    "type": "stats-grid",
+                    "columns": 4,
+                    "stats": [
+                      { "label": "Premium", "value": "{premium} CZUSD", "icon": "DollarSign" },
+                      { "label": "Max Payout", "value": "{maxPayout} CZUSD", "icon": "TrendingUp" },
+                      { "label": "Duration", "value": "{duration} days", "icon": "Clock" },
+                      { "label": "Policyholders", "value": "{current}/{max}", "icon": "Users" }
+                    ]
+                  },
+                  {
+                    "type": "chart",
+                    "chartType": "line",
+                    "title": "Trigger Metric Monitor",
+                    "description": "Time-series of monitored metric vs trigger threshold. Red zone = trigger territory.",
+                    "dataKeys": ["value", "threshold"]
+                  },
+                  {
+                    "type": "detail-card",
+                    "title": "Trigger Condition",
+                    "fields": [
+                      { "label": "Metric", "value": "{metric}", "type": "text" },
+                      { "label": "Condition", "value": "{comparison} {threshold}", "type": "text" },
+                      { "label": "Cadence", "value": "Every {cadence}", "type": "text" },
+                      { "label": "Consensus", "value": "{consensusMethod}", "type": "badge" }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "sources",
+                "label": "Sources",
+                "content": [
+                  {
+                    "type": "cards-grid",
+                    "columns": 3,
+                    "cards": [
+                      {
+                        "title": "{sourceName}",
+                        "subtitle": "{sourceUrl}",
+                        "badge": { "label": "Active", "color": "green" },
+                        "fields": [
+                          { "label": "Field Path", "value": "{fieldPath}" },
+                          { "label": "Last Value", "value": "{lastValue}" }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "detail-card",
+                    "title": "Consensus Method",
+                    "fields": [
+                      { "label": "Method", "value": "{consensusMethod} (median / majority / byFields)", "type": "badge" },
+                      { "label": "Min Confidence", "value": "80%", "type": "text" },
+                      { "label": "TEE Attested", "value": "Yes", "type": "badge" }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "agreements",
+                "label": "Agreements",
+                "content": [
+                  {
+                    "type": "content",
+                    "title": "Eligibility Agreement",
+                    "description": "Conditions the policyholder must satisfy to purchase this policy. Verified via EligibilityRegistry proof hash.",
+                    "variant": "info"
+                  },
+                  {
+                    "type": "content",
+                    "title": "Settlement Agreement",
+                    "description": "Conditions under which the pool settles and payouts are distributed. Enforced automatically by CRE on trigger confirmation.",
+                    "variant": "info"
+                  }
+                ]
+              },
+              {
+                "id": "ai-advisor",
+                "label": "AI Advisor",
+                "content": [
+                  {
+                    "type": "content",
+                    "title": "Ask about this pool",
+                    "description": "Claude answers questions about trigger conditions, payout mechanics, eligibility requirements, and risk factors for this specific pool."
+                  },
+                  {
+                    "type": "form",
+                    "fields": [
+                      {
+                        "name": "question",
+                        "label": "Your question",
+                        "type": "textarea",
+                        "placeholder": "e.g. When does the trigger fire? What counts as a valid payout event?",
+                        "required": true
+                      }
+                    ],
+                    "submitAction": {
+                      "label": "Ask",
+                      "action": "api-call",
+                      "endpoint": "/api/ai-chat",
+                      "pipelineRef": "api-endpoints",
+                      "description": "POST /api/ai-chat with question + pool context"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "states": [
+        {
+          "id": "loading",
+          "name": "Loading Pool Data",
+          "description": "Reading InsurancePool contract state",
+          "isInitial": true,
+          "mutations": [],
+          "elementDescriptions": {
+            "Header": "Pool address shown, name loading",
+            "Stats Grid": "Skeleton placeholders",
+            "Chart": "Loading spinner"
+          }
+        },
+        {
+          "id": "active",
+          "name": "Active Pool",
+          "description": "Pool is ACTIVE — policies can be purchased",
+          "triggeredBy": ["usePoolData resolves with state=ACTIVE"],
+          "mutations": [],
+          "elementDescriptions": {
+            "State Badge": "Blue 'ACTIVE' badge",
+            "Acquire Policy Button": "Enabled — green primary button",
+            "Policyholder Count": "Shows current/max count"
+          }
+        },
+        {
+          "id": "funding",
+          "name": "Funding Pool",
+          "description": "Pool is FUNDING — awaiting activation",
+          "triggeredBy": ["usePoolData resolves with state=FUNDING"],
+          "mutations": [],
+          "elementDescriptions": {
+            "State Badge": "Yellow 'FUNDING' badge",
+            "Acquire Policy Button": "Disabled with tooltip 'Pool not yet active'"
+          }
+        },
+        {
+          "id": "settled",
+          "name": "Settled Pool",
+          "description": "Trigger fired — pool settled, payouts distributed",
+          "triggeredBy": ["usePoolData resolves with state=SETTLED"],
+          "mutations": [],
+          "elementDescriptions": {
+            "State Badge": "Teal 'SETTLED' badge",
+            "Acquire Policy Button": "Hidden",
+            "Overview Tab": "Shows settlement event timestamp and total payout amount"
+          }
+        }
+      ],
+      "appFlows": [
+        {
+          "id": "view-pool-detail.load",
+          "name": "Load pool detail",
+          "trigger": "User navigates to /policies/[address]",
+          "priority": "critical",
+          "steps": [
+            { "layer": "blockchain", "description": "usePoolData(address) calls InsurancePool.getPoolData() — returns full OnChainPool struct including state, trigger params, sources config, premium, maxPayout", "pipelineRef": "forge-contracts" },
+            { "layer": "ui", "description": "Stats grid renders premium, maxPayout, duration, holder count from pool data" },
+            { "layer": "ui", "description": "MonitoringChart renders mock time-series for trigger metric with threshold horizontal line" },
+            { "layer": "ui", "description": "AgreementViewer decodes eligibilityAgreementHash and settlementAgreementHash from pool data" }
+          ],
+          "outcome": "User sees full pool parameters and can make informed acquisition decision"
+        },
+        {
+          "id": "view-pool-detail.ai-advisor",
+          "name": "Ask AI advisor question",
+          "trigger": "User submits question in AI Advisor tab",
+          "priority": "high",
+          "steps": [
+            { "layer": "ui", "description": "User enters question about pool conditions, eligibility, or trigger mechanics" },
+            { "layer": "api", "description": "POST /api/ai-chat with { prompt: question, context: poolSummaryString } — forwards to Claude Service", "pipelineRef": "api-endpoints" },
+            { "layer": "external", "description": "Claude Service (Sonnet) processes prompt with pool context, returns structured answer" },
+            { "layer": "ui", "description": "Response rendered as assistant message in chat thread" }
+          ],
+          "outcome": "User gets clear, pool-specific explanation of terms and risks"
+        }
+      ]
+    }
+  ],
+  "apiEndpoints": [
+    {
+      "id": "pool-detail.ai-chat",
+      "method": "POST",
+      "path": "/api/ai-chat",
+      "description": "AI insurance advisor — Claude Service answers pool-specific questions with pool context injected into system prompt",
+      "auth": false,
+      "roles": [],
+      "request": { "prompt": "string — user question", "context": "string — pool summary including trigger, terms, sources" },
+      "response": { "text": "string — Claude's answer" },
+      "serverFlow": [
+        { "order": 1, "layer": "validation", "description": "Validate prompt (non-empty string) and context" },
+        { "order": 2, "layer": "external", "description": "chatSync({ prompt, context, model: 'sonnet' }) — POST to Claude Service with pool context as system message" },
+        { "order": 3, "layer": "response", "description": "Return { text: response.text }" }
+      ],
+      "errorResponses": [
+        { "status": 400, "description": "Missing prompt", "when": "prompt is empty or missing" },
+        { "status": 502, "description": "Claude Service unreachable", "when": "CLAUDE_SERVICE_URL is down or returns non-200" }
+      ],
+      "calledBy": ["pool-detail.detail"]
+    }
+  ],
+  "dbTables": []
+}

@@ -1,0 +1,379 @@
+{
+  "id": "create",
+  "name": "Create Pool",
+  "description": "4-step wizard to deploy a new parametric insurance pool on Avalanche Fuji",
+  "color": "#8b5cf6",
+  "icon": "PlusCircle",
+  "screens": [
+    {
+      "id": "create.wizard",
+      "name": "Create Pool Wizard",
+      "route": "/create",
+      "status": "implemented",
+      "priority": "critical",
+      "roles": ["creator"],
+      "components": ["StepSources", "StepTrigger", "StepAgreements", "StepDeploy", "DepositDialog"],
+      "description": "4-step wizard: Sources (select 2-3 data sources + consensus method), Trigger (metric, comparison, threshold, cadence), Agreements (eligibility + settlement text with AI generation), Deploy (premium/payout/duration/holders, deposit underwriting capital, deploy via SurelyFactory).",
+      "ui": {
+        "layout": "centered-card",
+        "sections": [
+          {
+            "type": "header",
+            "title": "Create Insurance Pool",
+            "subtitle": "Deploy a new parametric pool on Avalanche Fuji"
+          },
+          {
+            "type": "wizard",
+            "steps": [
+              {
+                "id": "sources",
+                "label": "Sources",
+                "description": "Select data sources for trigger monitoring",
+                "fields": [
+                  {
+                    "name": "sources",
+                    "label": "Data Sources",
+                    "type": "select",
+                    "required": true,
+                    "helperText": "Select 2-3 sources: CoinGecko, CryptoCompare, Chainlink, OpenWeather, FlightAware, custom HTTP"
+                  },
+                  {
+                    "name": "consensusMethod",
+                    "label": "Consensus Method",
+                    "type": "toggle",
+                    "required": true,
+                    "options": ["median", "majority", "byFields"],
+                    "helperText": "How to resolve disagreements across sources"
+                  }
+                ]
+              },
+              {
+                "id": "trigger",
+                "label": "Trigger",
+                "description": "Configure the on-chain trigger condition",
+                "fields": [
+                  {
+                    "name": "metric",
+                    "label": "Metric",
+                    "type": "text",
+                    "required": true,
+                    "placeholder": "e.g. price, temperature, delay_minutes"
+                  },
+                  {
+                    "name": "comparison",
+                    "label": "Comparison",
+                    "type": "select",
+                    "required": true,
+                    "options": ["gt", "lt", "gte", "lte", "eq"]
+                  },
+                  {
+                    "name": "threshold",
+                    "label": "Threshold",
+                    "type": "text",
+                    "required": true,
+                    "placeholder": "e.g. 50000 for BTC price in USD"
+                  },
+                  {
+                    "name": "duration",
+                    "label": "Pool Duration",
+                    "type": "select",
+                    "required": true,
+                    "options": ["7 days", "14 days", "30 days", "90 days", "180 days", "365 days"]
+                  },
+                  {
+                    "name": "cadence",
+                    "label": "Check Cadence",
+                    "type": "select",
+                    "required": true,
+                    "options": ["Every hour", "Every 6 hours", "Every day", "Every week"]
+                  }
+                ]
+              },
+              {
+                "id": "agreements",
+                "label": "Agreements",
+                "description": "Write eligibility and settlement agreement text",
+                "fields": [
+                  {
+                    "name": "verificationType",
+                    "label": "Verification Type",
+                    "type": "select",
+                    "required": true,
+                    "options": ["none", "identity", "flight", "employment", "property"],
+                    "helperText": "What policyholders must prove to purchase"
+                  },
+                  {
+                    "name": "eligibilityAgreement",
+                    "label": "Eligibility Agreement",
+                    "type": "textarea",
+                    "required": true,
+                    "placeholder": "Describe who is eligible to purchase this policy...",
+                    "helperText": "AI generation available — click Generate"
+                  },
+                  {
+                    "name": "settlementAgreement",
+                    "label": "Settlement Agreement",
+                    "type": "textarea",
+                    "required": true,
+                    "placeholder": "Describe when and how payouts are distributed...",
+                    "helperText": "AI generation available — click Generate"
+                  }
+                ]
+              },
+              {
+                "id": "deploy",
+                "label": "Deploy",
+                "description": "Set pool economics and deploy on-chain",
+                "fields": [
+                  {
+                    "name": "premium",
+                    "label": "Premium (CZUSD)",
+                    "type": "text",
+                    "required": true,
+                    "placeholder": "e.g. 100",
+                    "helperText": "Amount policyholders pay to join"
+                  },
+                  {
+                    "name": "maxPayout",
+                    "label": "Max Payout (CZUSD)",
+                    "type": "text",
+                    "required": true,
+                    "placeholder": "e.g. 10000",
+                    "helperText": "Maximum payout per policyholder on trigger"
+                  },
+                  {
+                    "name": "minHolders",
+                    "label": "Min Policyholders",
+                    "type": "text",
+                    "required": true,
+                    "placeholder": "e.g. 10"
+                  },
+                  {
+                    "name": "maxHolders",
+                    "label": "Max Policyholders",
+                    "type": "text",
+                    "required": true,
+                    "placeholder": "e.g. 100"
+                  },
+                  {
+                    "name": "depositAmount",
+                    "label": "Underwriting Deposit (CZUSD)",
+                    "type": "text",
+                    "required": true,
+                    "helperText": "Must be >= maxPayout * minHolders to activate pool"
+                  },
+                  {
+                    "name": "gasAck",
+                    "label": "I have AVAX for gas fees",
+                    "type": "checkbox",
+                    "required": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "states": [
+        {
+          "id": "sources-step",
+          "name": "Sources Step",
+          "description": "Step 1 — selecting data sources and consensus method",
+          "isInitial": true,
+          "mutations": [],
+          "elementDescriptions": {
+            "Step Indicator": "Step 1 of 4 highlighted",
+            "Source Cards": "Grid of available sources (CoinGecko, CryptoCompare, Chainlink, OpenWeather, FlightAware) — click to select",
+            "Consensus Toggle": "median / majority / byFields toggle — default median",
+            "Next Button": "Disabled until at least 2 sources selected"
+          }
+        },
+        {
+          "id": "trigger-step",
+          "name": "Trigger Step",
+          "description": "Step 2 — configuring the trigger condition",
+          "triggeredBy": ["Next click from Sources step"],
+          "mutations": [],
+          "elementDescriptions": {
+            "Step Indicator": "Step 2 of 4 highlighted",
+            "Metric Input": "Free text for the field path from source (e.g. 'price')",
+            "Comparison Dropdown": "gt / lt / gte / lte / eq",
+            "Threshold Input": "Numeric value (e.g. 50000 for BTC)",
+            "Test Source Button": "Calls /api/test-source — shows live value from configured sources",
+            "Next Button": "Disabled until all fields filled and test passes"
+          }
+        },
+        {
+          "id": "agreements-step",
+          "name": "Agreements Step",
+          "description": "Step 3 — writing eligibility and settlement agreements",
+          "triggeredBy": ["Next click from Trigger step"],
+          "mutations": [],
+          "elementDescriptions": {
+            "Step Indicator": "Step 3 of 4 highlighted",
+            "Verification Type": "Select drives eligibility form shown to policyholders",
+            "Eligibility Textarea": "Editable agreement text with Generate AI button",
+            "Settlement Textarea": "Editable agreement text with Generate AI button",
+            "Generate Button": "Calls /api/ai-chat with pool context — fills textarea with AI draft"
+          }
+        },
+        {
+          "id": "agreements-generating",
+          "name": "AI Generating Agreement",
+          "description": "POST /api/ai-chat in flight for agreement generation",
+          "triggeredBy": ["Generate button click"],
+          "mutations": [
+            { "selector": "[data-generate-btn]", "op": { "type": "setText", "value": "Generating..." } }
+          ],
+          "elementDescriptions": {
+            "Generate Button": "Spinner, disabled while waiting for Claude Service response"
+          }
+        },
+        {
+          "id": "deploy-step",
+          "name": "Deploy Step",
+          "description": "Step 4 — setting pool economics and deploying",
+          "triggeredBy": ["Next click from Agreements step"],
+          "mutations": [],
+          "elementDescriptions": {
+            "Step Indicator": "Step 4 of 4 highlighted",
+            "Premium / Max Payout Inputs": "CZUSD amounts",
+            "Deposit Input": "Must cover maxPayout × minHolders",
+            "Deposit Button": "Opens DepositDialog — CZUSD.approve() + transfer before deploy",
+            "Deploy Button": "Disabled until deposit confirmed and gasAck checked"
+          }
+        },
+        {
+          "id": "deploying",
+          "name": "Deploying Pool",
+          "description": "SurelyFactory.createPool() tx submitted",
+          "triggeredBy": ["Deploy button click"],
+          "mutations": [
+            { "selector": "[data-deploy-btn]", "op": { "type": "setText", "value": "Deploying..." } }
+          ],
+          "elementDescriptions": {
+            "Deploy Button": "Spinner, disabled — wallet signing in progress"
+          }
+        },
+        {
+          "id": "activating",
+          "name": "Activating Pool",
+          "description": "POST /api/activate-pool called after createPool() tx confirms",
+          "triggeredBy": ["createPool() tx confirmed"],
+          "mutations": [
+            { "selector": "[data-deploy-btn]", "op": { "type": "setText", "value": "Activating..." } }
+          ],
+          "elementDescriptions": {
+            "Status Message": "Server wallet calling factory.activatePool() — transitioning FUNDING → ACTIVE"
+          }
+        },
+        {
+          "id": "success",
+          "name": "Pool Deployed",
+          "description": "Pool is ACTIVE — user redirected to pool detail page",
+          "triggeredBy": ["/api/activate-pool 200 response"],
+          "mutations": [],
+          "elementDescriptions": {
+            "Success State": "Green checkmark, pool address, link to /policies/[address]"
+          }
+        }
+      ],
+      "appFlows": [
+        {
+          "id": "create-pool.sources",
+          "name": "Select data sources and consensus",
+          "trigger": "User clicks source cards and selects consensus method",
+          "priority": "critical",
+          "steps": [
+            { "layer": "ui", "description": "User selects 2-3 source cards (CoinGecko, CryptoCompare, Chainlink, OpenWeather, FlightAware)" },
+            { "layer": "ui", "description": "Consensus method toggle: median (default), majority, or byFields" },
+            { "layer": "ui", "description": "Next button enabled when >= 2 sources selected" }
+          ],
+          "outcome": "sources[] and consensusMethod stored in wizard state"
+        },
+        {
+          "id": "create-pool.trigger",
+          "name": "Configure trigger condition",
+          "trigger": "User fills trigger fields and clicks Test Source",
+          "priority": "critical",
+          "steps": [
+            { "layer": "ui", "description": "User fills metric, comparison, threshold, duration, cadence" },
+            { "layer": "api", "description": "POST /api/test-source with source config — proxy to mock server, returns live metric value", "pipelineRef": "api-endpoints" },
+            { "layer": "ui", "description": "Live value shown next to threshold for comparison — user confirms trigger makes sense" }
+          ],
+          "outcome": "Trigger config validated against live source data"
+        },
+        {
+          "id": "create-pool.agreements",
+          "name": "Generate and write agreements",
+          "trigger": "User clicks Generate AI button or writes agreements manually",
+          "priority": "high",
+          "steps": [
+            { "layer": "api", "description": "POST /api/ai-chat with pool context (metric, threshold, sources) — Claude Service generates eligibility agreement draft", "pipelineRef": "api-endpoints" },
+            { "layer": "api", "description": "POST /api/ai-chat for settlement agreement — describes payout conditions in plain language", "pipelineRef": "api-endpoints" },
+            { "layer": "ui", "description": "Textarea populated with AI draft — user can edit before proceeding" }
+          ],
+          "outcome": "eligibilityAgreement and settlementAgreement text ready for on-chain hash"
+        },
+        {
+          "id": "create-pool.deploy",
+          "name": "Deploy pool on-chain",
+          "trigger": "User completes deposit and clicks Deploy",
+          "priority": "critical",
+          "steps": [
+            { "layer": "blockchain", "description": "CZUSD.approve(factoryAddress, depositAmount) — user signs approval", "pipelineRef": "forge-contracts" },
+            { "layer": "blockchain", "description": "SurelyFactory.createPool(name, description, ...triggerParams, ...economicParams, eligibilityHash, settlementHash) — deploys new InsurancePool", "pipelineRef": "forge-contracts" },
+            { "layer": "api", "description": "POST /api/activate-pool with { txHash } — server wallet calls factory.activatePool(poolAddress)", "pipelineRef": "api-endpoints" },
+            { "layer": "blockchain", "description": "InsurancePool state transitions FUNDING → ACTIVE on factory.activatePool()", "pipelineRef": "forge-contracts" },
+            { "layer": "ui", "description": "Router.push('/policies/[newPoolAddress]') — user sees their new pool detail page" }
+          ],
+          "outcome": "New InsurancePool deployed and ACTIVE on Avalanche Fuji"
+        }
+      ]
+    }
+  ],
+  "apiEndpoints": [
+    {
+      "id": "create.activate-pool",
+      "method": "POST",
+      "path": "/api/activate-pool",
+      "description": "Server wallet activates a newly deployed pool. Reads pool address from txHash receipt, calls SurelyFactory.activatePool(poolAddress) to transition FUNDING → ACTIVE.",
+      "auth": false,
+      "roles": [],
+      "request": { "txHash": "string — createPool() transaction hash" },
+      "response": { "poolAddress": "string — deployed pool contract address", "status": "string — 'ACTIVE'" },
+      "serverFlow": [
+        { "order": 1, "layer": "validation", "description": "Validate txHash is valid 0x-prefixed hex string" },
+        { "order": 2, "layer": "blockchain", "description": "publicClient.getTransactionReceipt(txHash) — extract poolAddress from PoolCreated event logs" },
+        { "order": 3, "layer": "blockchain", "description": "Server wallet calls SurelyFactory.activatePool(poolAddress) — pool transitions FUNDING → ACTIVE" },
+        { "order": 4, "layer": "response", "description": "Return { poolAddress, status: 'ACTIVE' }" }
+      ],
+      "errorResponses": [
+        { "status": 400, "description": "Invalid txHash", "when": "txHash not valid hex or tx not found" },
+        { "status": 500, "description": "Activation failed", "when": "activatePool() reverts or RPC unreachable" }
+      ],
+      "calledBy": ["create.wizard"]
+    },
+    {
+      "id": "create.test-source",
+      "method": "POST",
+      "path": "/api/test-source",
+      "description": "Proxy to mock server to test data source connectivity and preview live metric values before pool deployment.",
+      "auth": false,
+      "roles": [],
+      "request": { "sourceUrl": "string — data source URL", "fieldPath": "string — JSON path to metric field" },
+      "response": { "value": "number — current metric value", "timestamp": "string — ISO timestamp" },
+      "serverFlow": [
+        { "order": 1, "layer": "validation", "description": "Validate sourceUrl is reachable HTTP URL, fieldPath is non-empty" },
+        { "order": 2, "layer": "external", "description": "Server fetches sourceUrl, extracts value at fieldPath via JSON path" },
+        { "order": 3, "layer": "response", "description": "Return { value, timestamp } — client displays as live preview" }
+      ],
+      "errorResponses": [
+        { "status": 400, "description": "Invalid source config", "when": "URL unreachable or field path returns null" },
+        { "status": 502, "description": "Source fetch failed", "when": "Upstream API returned non-200 or timeout" }
+      ],
+      "calledBy": ["create.wizard"]
+    }
+  ],
+  "dbTables": []
+}

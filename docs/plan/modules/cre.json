@@ -1,0 +1,72 @@
+{
+  "id": "cre",
+  "name": "CRE Workflows",
+  "description": "Chainlink Runtime Environment workflows for trigger monitoring, eligibility KYC, settlement, and fiat payment processing",
+  "color": "#ef4444",
+  "icon": "Zap",
+  "screens": [],
+  "apiEndpoints": [],
+  "dbTables": [
+    {
+      "id": "cre.trigger-monitoring",
+      "name": "trigger-monitoring",
+      "description": "Cron-triggered workflow that fetches data from configured sources (CoinGecko, Chainlink price feeds, weather APIs), applies consensus (median/majority/byFields) inside TEE enclave, compares against pool threshold, and calls CRERouter.report() on-chain if trigger condition is met.",
+      "columns": [
+        { "name": "trigger", "type": "Cron (configurable cadence per pool)", "primary": true },
+        { "name": "capabilities", "type": "HTTP Client (TEE), EVM Write, Consensus", "nullable": false },
+        { "name": "path", "type": "packages/cre/trigger-monitoring/", "nullable": false },
+        { "name": "inputs", "type": "pool address, sources config, threshold, comparison, cadence", "nullable": false },
+        { "name": "outputs", "type": "CRERouter.report(poolAddress, action, settlementAmount)", "nullable": false },
+        { "name": "teeAttested", "type": "boolean — true, runs in Confidential HTTP", "nullable": false },
+        { "name": "consensusMethods", "type": "median | majority | byFields", "nullable": false }
+      ],
+      "relations": [
+        { "table": "cre.settlement", "column": "trigger", "type": "one-to-many" }
+      ]
+    },
+    {
+      "id": "cre.eligibility-kyc",
+      "name": "eligibility-kyc",
+      "description": "HTTP-triggered workflow that verifies user eligibility inside CRE TEE enclave. Validates documents, checks regulatory compliance (sanctions, KYC level), and writes proof hash to EligibilityRegistry on-chain. Called by /api/eligibility as a server wallet alternative.",
+      "columns": [
+        { "name": "trigger", "type": "HTTP (called by /api/eligibility or direct CRE trigger)", "primary": true },
+        { "name": "capabilities", "type": "HTTP Client (TEE / Confidential HTTP), EVM Write", "nullable": false },
+        { "name": "path", "type": "packages/cre/eligibility-kyc/", "nullable": false },
+        { "name": "inputs", "type": "walletAddress, verificationType, formData JSON", "nullable": false },
+        { "name": "outputs", "type": "EligibilityRegistry.storeProof(user, verificationType, proofHash)", "nullable": false },
+        { "name": "teeAttested", "type": "boolean — true, PII processed in enclave only", "nullable": false }
+      ],
+      "relations": []
+    },
+    {
+      "id": "cre.settlement",
+      "name": "settlement",
+      "description": "Triggered when trigger-monitoring confirms the trigger condition has fired. Calculates pro-rata payout amounts per policy, calls InsurancePool.onReport(SETTLEMENT, amount) to distribute CZUSD to all active policyholders. Pool state transitions ACTIVE → SETTLED.",
+      "columns": [
+        { "name": "trigger", "type": "Triggered by trigger-monitoring workflow result or manual CRE call", "primary": true },
+        { "name": "capabilities", "type": "EVM Write, EVM Read", "nullable": false },
+        { "name": "path", "type": "packages/cre/settlement/", "nullable": false },
+        { "name": "inputs", "type": "poolAddress, action (SETTLEMENT | EXPIRY), settlementAmount", "nullable": false },
+        { "name": "outputs", "type": "InsurancePool.onReport(1, settlementAmount) — distributes CZUSD, updates PolicyNFT statuses", "nullable": false },
+        { "name": "teeAttested", "type": "boolean — false, standard EVM write", "nullable": true }
+      ],
+      "relations": [
+        { "table": "cre.trigger-monitoring", "column": "outputs", "type": "many-to-one" }
+      ]
+    },
+    {
+      "id": "cre.payment-fiat",
+      "name": "payment-fiat",
+      "description": "HTTP-triggered by Stripe webhook forwarded from /api/stripe-webhook. Verifies payment completion off-chain inside TEE, then calls CZUSDConsumer.mint() to issue CZUSD tokens to the user's wallet. Decouples fiat payment from on-chain mint.",
+      "columns": [
+        { "name": "trigger", "type": "HTTP (Stripe payment_intent.succeeded webhook forwarded)", "primary": true },
+        { "name": "capabilities", "type": "HTTP Client (TEE), EVM Write", "nullable": false },
+        { "name": "path", "type": "packages/cre/payment-fiat/", "nullable": false },
+        { "name": "inputs", "type": "walletAddress, amount (CZUSD), stripePaymentIntentId", "nullable": false },
+        { "name": "outputs", "type": "CZUSDConsumer.mint(userAddress, amount) — mints CZUSD to wallet", "nullable": false },
+        { "name": "teeAttested", "type": "boolean — true, Stripe verification in enclave", "nullable": false }
+      ],
+      "relations": []
+    }
+  ]
+}

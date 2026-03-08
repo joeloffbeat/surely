@@ -1,0 +1,126 @@
+{
+  "id": "pools",
+  "name": "Insurance Pools",
+  "description": "Browse all insurance pools with grid/table view, search, and type filtering",
+  "color": "#6366f1",
+  "icon": "Shield",
+  "screens": [
+    {
+      "id": "pools.list",
+      "name": "Pools Browser",
+      "route": "/policies",
+      "status": "implemented",
+      "priority": "critical",
+      "roles": [],
+      "components": ["PoolCardWrapper", "PoolTableWrapper"],
+      "description": "Grid/table view of all insurance pools from SurelyFactory. Supports search by name, filter by pool type (crypto/stablecoin/weather/flight), and view toggle (grid/table). Each pool card shows name, type badge, state badge, premium, maxPayout, policyholder count.",
+      "ui": {
+        "layout": "page-with-header",
+        "sections": [
+          {
+            "type": "header",
+            "title": "Insurance Pools",
+            "subtitle": "Browse all active parametric insurance pools",
+            "actions": [
+              {
+                "label": "Create Pool",
+                "icon": "Plus",
+                "variant": "primary",
+                "action": "navigate",
+                "target": "/create",
+                "description": "Navigate to 4-step pool creation wizard"
+              }
+            ]
+          },
+          {
+            "type": "data-table",
+            "columns": [
+              { "key": "name", "label": "Pool Name", "type": "text" },
+              { "key": "type", "label": "Type", "type": "badge" },
+              { "key": "state", "label": "State", "type": "badge" },
+              { "key": "premium", "label": "Premium", "type": "currency" },
+              { "key": "maxPayout", "label": "Max Payout", "type": "currency" },
+              { "key": "policyholders", "label": "Policyholders", "type": "number", "hiddenOn": "mobile" }
+            ],
+            "filters": [
+              { "key": "search", "label": "Search pools", "type": "search" },
+              { "key": "type", "label": "Type", "type": "select", "options": ["All", "Crypto", "Stablecoin", "Weather", "Flight"] },
+              { "key": "state", "label": "State", "type": "select", "options": ["All", "FUNDING", "ACTIVE", "SETTLED", "EXPIRED"] }
+            ],
+            "rowActions": [
+              { "label": "View Pool", "action": "navigate", "target": "/policies/[address]" }
+            ],
+            "emptyMessage": "No pools found matching filters."
+          }
+        ]
+      },
+      "states": [
+        {
+          "id": "loading",
+          "name": "Loading",
+          "description": "Fetching pool addresses from SurelyFactory on-chain",
+          "isInitial": true,
+          "mutations": [
+            { "selector": "[data-pool-grid]", "op": { "type": "addClass", "classes": "opacity-50 pointer-events-none" } }
+          ],
+          "elementDescriptions": {
+            "Pool Grid": "Skeleton cards shown while reading factory.getPoolAddresses()",
+            "Create Pool Button": "Enabled immediately"
+          }
+        },
+        {
+          "id": "loaded",
+          "name": "Loaded",
+          "description": "Pool list visible and filterable",
+          "triggeredBy": ["useAllPools resolves"],
+          "mutations": [
+            { "selector": "[data-pool-grid]", "op": { "type": "removeClass", "classes": "opacity-50 pointer-events-none" } }
+          ],
+          "elementDescriptions": {
+            "Pool Cards": "Each card: name, type badge (Crypto/Weather/Flight/Stablecoin), state badge (FUNDING green / ACTIVE blue / SETTLED grey), premium in CZUSD, maxPayout in CZUSD",
+            "Search": "Client-side filter — updates cards instantly"
+          }
+        },
+        {
+          "id": "filtered",
+          "name": "Filtered",
+          "description": "User has applied search/type/state filters",
+          "triggeredBy": ["Search input change", "Type filter change", "State filter change"],
+          "mutations": [],
+          "elementDescriptions": {
+            "Pool Grid": "Shows subset matching all active filters",
+            "Result Count": "Shows N pools matching filters"
+          }
+        }
+      ],
+      "appFlows": [
+        {
+          "id": "browse-pools.load",
+          "name": "Load insurance pools on-chain",
+          "trigger": "Page load at /policies",
+          "priority": "critical",
+          "steps": [
+            { "layer": "blockchain", "description": "useAllPools() reads SurelyFactory.getPoolAddresses() — returns address[] of all deployed pools", "pipelineRef": "forge-contracts" },
+            { "layer": "blockchain", "description": "PoolCardWrapper calls usePoolData(address) per pool — reads InsurancePool.getPoolData() returning OnChainPool struct", "pipelineRef": "forge-contracts" },
+            { "layer": "ui", "description": "Pool cards rendered with name, type badge, state badge, premium/maxPayout in CZUSD, policyholder count" }
+          ],
+          "outcome": "User sees all deployed pools with live on-chain state"
+        },
+        {
+          "id": "browse-pools.filter",
+          "name": "Filter and search pools",
+          "trigger": "User types in search or selects filter",
+          "priority": "high",
+          "steps": [
+            { "layer": "ui", "description": "Search input filters pool list client-side by pool name (case-insensitive)" },
+            { "layer": "ui", "description": "Type filter narrows to crypto/stablecoin/weather/flight pools" },
+            { "layer": "ui", "description": "State filter narrows to FUNDING/ACTIVE/SETTLED/EXPIRED pools" }
+          ],
+          "outcome": "Filtered subset of pools shown instantly without re-fetching"
+        }
+      ]
+    }
+  ],
+  "apiEndpoints": [],
+  "dbTables": []
+}
