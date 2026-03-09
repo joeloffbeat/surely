@@ -1,0 +1,2197 @@
+{
+  "app": "Surely",
+  "version": "1.0.0",
+  "generatedAt": "2026-02-28T12:00:00.000Z",
+  "description": "Parametric insurance protocol on Chainlink CRE. Insurance pools with custom trigger conditions, multi-source data verification, AI adjudication, and instant on-chain payouts.",
+  "techStack": {
+    "Framework": "Next.js 15 (App Router)",
+    "Auth": "Thirdweb Connect",
+    "UI": "Tailwind CSS + shadcn/ui",
+    "AI (App)": "Claude Service",
+    "AI (CRE TEE)": "Gemini via CRE HTTP Client",
+    "Contracts": "Foundry (Solidity)",
+    "Protocols": "Chainlink CRE",
+    "Payments": "Stripe",
+    "Chain": "Avalanche Fuji",
+    "Stablecoin": "CZUSD (CZUSD)"
+  },
+  "modules": [
+    {
+      "id": "marketplace",
+      "name": "Insurance Marketplace",
+      "description": "Browse, search, and explore available insurance pools. View pool details, monitoring data, agreements, and get AI-powered advice.",
+      "color": "#3b82f6",
+      "icon": "Store",
+      "screens": [
+        {
+          "id": "policies-list",
+          "name": "Policies List",
+          "route": "/policies",
+          "description": "Grid/table view of all available insurance pools with search, type filtering, and view toggle (card/table).",
+          "components": [
+            "policies-client",
+            "pool-card-wrapper",
+            "pool-table-wrapper",
+            "header",
+            "footer"
+          ],
+          "roles": ["user", "admin"],
+          "priority": "critical",
+          "status": "implemented",
+          "ui": {
+            "layout": "page-with-header",
+            "sections": [
+              {
+                "type": "header",
+                "title": "Insurance Marketplace",
+                "subtitle": "Browse parametric insurance pools",
+                "actions": [
+                  {
+                    "label": "Create Pool",
+                    "icon": "Plus",
+                    "variant": "primary",
+                    "action": "navigate",
+                    "target": "/create"
+                  }
+                ]
+              },
+              {
+                "type": "stats-grid",
+                "columns": 4,
+                "stats": [
+                  {
+                    "label": "Active Pools",
+                    "value": "12",
+                    "icon": "Shield",
+                    "color": "#3b82f6"
+                  },
+                  {
+                    "label": "Total TVL",
+                    "value": "$2.4M",
+                    "icon": "DollarSign",
+                    "color": "#10b981"
+                  },
+                  {
+                    "label": "Policies Sold",
+                    "value": "847",
+                    "icon": "FileText",
+                    "color": "#8b5cf6"
+                  },
+                  {
+                    "label": "Claims Paid",
+                    "value": "$180K",
+                    "icon": "CheckCircle",
+                    "color": "#f59e0b"
+                  }
+                ]
+              },
+              {
+                "type": "data-table",
+                "columns": [
+                  { "key": "name", "label": "Pool Name", "type": "text" },
+                  { "key": "type", "label": "Type", "type": "badge" },
+                  { "key": "premium", "label": "Premium", "type": "currency" },
+                  {
+                    "key": "coverage",
+                    "label": "Coverage",
+                    "type": "currency"
+                  },
+                  {
+                    "key": "tvl",
+                    "label": "TVL",
+                    "type": "currency",
+                    "hiddenOn": "mobile"
+                  },
+                  { "key": "state", "label": "Status", "type": "badge" },
+                  { "key": "actions", "label": "", "type": "actions" }
+                ],
+                "filters": [
+                  {
+                    "key": "search",
+                    "label": "Search pools",
+                    "type": "search"
+                  },
+                  {
+                    "key": "type",
+                    "label": "Pool Type",
+                    "type": "select",
+                    "options": [
+                      "All",
+                      "Weather",
+                      "Flight",
+                      "Crop",
+                      "Earthquake",
+                      "Custom"
+                    ]
+                  },
+                  {
+                    "key": "view",
+                    "label": "View",
+                    "type": "select",
+                    "options": ["Cards", "Table"]
+                  }
+                ],
+                "rowActions": [
+                  {
+                    "label": "View Details",
+                    "icon": "Eye",
+                    "variant": "ghost",
+                    "action": "navigate",
+                    "target": "/policies/[address]"
+                  }
+                ],
+                "pagination": true,
+                "emptyMessage": "No insurance pools found. Create the first one!"
+              }
+            ]
+          },
+          "appFlows": [
+            {
+              "id": "browse-pools",
+              "name": "Browse Available Pools",
+              "trigger": "User navigates to /policies",
+              "priority": "critical",
+              "steps": [
+                {
+                  "layer": "ui",
+                  "description": "Page loads with loading skeleton",
+                  "ref": "policies-client"
+                },
+                {
+                  "layer": "blockchain",
+                  "description": "Fetch pool list from ClaimZeroFactory contract via thirdweb SDK",
+                  "ref": "contracts.ts"
+                },
+                {
+                  "layer": "ui",
+                  "description": "Render pool cards/table with pool data",
+                  "ref": "pool-card-wrapper"
+                },
+                {
+                  "layer": "ui",
+                  "description": "User can search, filter by type, toggle card/table view"
+                }
+              ],
+              "outcome": "User sees all available insurance pools with key metrics"
+            },
+            {
+              "id": "navigate-to-detail",
+              "name": "Navigate to Pool Detail",
+              "trigger": "User clicks on a pool card or View Details button",
+              "priority": "critical",
+              "steps": [
+                {
+                  "layer": "ui",
+                  "description": "Click pool card triggers Next.js router navigation"
+                },
+                {
+                  "layer": "ui",
+                  "description": "Navigate to /policies/[address] with pool contract address"
+                }
+              ],
+              "outcome": "User lands on pool detail page for the selected pool"
+            }
+          ]
+        },
+        {
+          "id": "pool-detail",
+          "name": "Pool Detail",
+          "route": "/policies/[address]",
+          "description": "Detailed view of an insurance pool showing monitoring chart, trigger conditions, agreements, deposit dialog, and AI advisor chat.",
+          "components": [
+            "detail-client",
+            "monitoring-chart",
+            "agreement-viewer",
+            "ai-advisor",
+            "deposit-dialog",
+            "czusd-converter",
+            "header",
+            "footer"
+          ],
+          "roles": ["user", "admin"],
+          "priority": "critical",
+          "status": "implemented",
+          "dependsOn": ["policies-list"],
+          "ui": {
+            "layout": "detail",
+            "sections": [
+              {
+                "type": "header",
+                "title": "Pool: Weather Protection — NYC",
+                "subtitle": "Parametric weather insurance for New York City area",
+                "backLink": "/policies",
+                "actions": [
+                  {
+                    "label": "Get Coverage",
+                    "icon": "Shield",
+                    "variant": "primary",
+                    "action": "navigate",
+                    "target": "/policies/[address]/acquire"
+                  },
+                  {
+                    "label": "Deposit",
+                    "icon": "Plus",
+                    "variant": "outline",
+                    "action": "dialog",
+                    "target": "deposit-dialog"
+                  }
+                ]
+              },
+              {
+                "type": "stats-grid",
+                "columns": 4,
+                "stats": [
+                  {
+                    "label": "TVL",
+                    "value": "$500K",
+                    "icon": "Vault",
+                    "color": "#3b82f6"
+                  },
+                  {
+                    "label": "Premium",
+                    "value": "$50/mo",
+                    "icon": "DollarSign",
+                    "color": "#10b981"
+                  },
+                  {
+                    "label": "Coverage",
+                    "value": "$10K",
+                    "icon": "Shield",
+                    "color": "#8b5cf6"
+                  },
+                  {
+                    "label": "Active Policies",
+                    "value": "127",
+                    "icon": "Users",
+                    "color": "#f59e0b"
+                  }
+                ]
+              },
+              {
+                "type": "chart",
+                "chartType": "area",
+                "title": "Pool Monitoring",
+                "description": "Real-time monitoring of trigger conditions and pool health",
+                "dataKeys": ["temperature", "threshold", "tvl"]
+              },
+              {
+                "type": "detail-card",
+                "title": "Trigger Conditions",
+                "icon": "Zap",
+                "fields": [
+                  {
+                    "label": "Trigger Type",
+                    "value": "Temperature Below Threshold",
+                    "type": "text"
+                  },
+                  {
+                    "label": "Threshold",
+                    "value": "< 32°F for 48 hours",
+                    "type": "text"
+                  },
+                  {
+                    "label": "Data Sources",
+                    "value": "OpenWeather API, AccuWeather",
+                    "type": "text"
+                  },
+                  {
+                    "label": "Verification",
+                    "value": "CRE Multi-Source Consensus",
+                    "type": "badge"
+                  },
+                  {
+                    "label": "Settlement",
+                    "value": "Automatic via CRE + AI Adjudication",
+                    "type": "badge"
+                  }
+                ]
+              },
+              {
+                "type": "content",
+                "title": "Agreement Terms",
+                "description": "Review the full insurance agreement including coverage terms, exclusions, and payout conditions.",
+                "variant": "info"
+              },
+              {
+                "type": "detail-card",
+                "title": "AI Advisor",
+                "icon": "Bot",
+                "fields": [
+                  { "label": "Status", "value": "Online", "type": "badge" },
+                  {
+                    "label": "Model",
+                    "value": "Claude (Sonnet)",
+                    "type": "text"
+                  },
+                  {
+                    "label": "Capabilities",
+                    "value": "Pool analysis, risk assessment, coverage recommendations",
+                    "type": "text"
+                  }
+                ]
+              }
+            ],
+            "dialogs": [
+              {
+                "id": "deposit-dialog",
+                "title": "Deposit to Pool",
+                "description": "Add liquidity to this insurance pool to earn yield from premiums.",
+                "fields": [
+                  {
+                    "name": "amount",
+                    "label": "Amount (CZUSD)",
+                    "type": "currency",
+                    "required": true,
+                    "placeholder": "0.00"
+                  },
+                  {
+                    "name": "duration",
+                    "label": "Lock Duration",
+                    "type": "select",
+                    "options": ["30 days", "90 days", "180 days", "365 days"]
+                  }
+                ],
+                "submitAction": {
+                  "label": "Deposit",
+                  "icon": "ArrowUpRight",
+                  "variant": "primary",
+                  "action": "api-call",
+                  "endpoint": "InsurancePool.deposit()"
+                }
+              }
+            ]
+          },
+          "appFlows": [
+            {
+              "id": "view-pool-detail",
+              "name": "View Pool Details",
+              "trigger": "User navigates to /policies/[address]",
+              "priority": "critical",
+              "steps": [
+                {
+                  "layer": "ui",
+                  "description": "Page loads, extracts pool address from URL params"
+                },
+                {
+                  "layer": "blockchain",
+                  "description": "Read pool data from InsurancePool contract (TVL, premium, coverage, state)"
+                },
+                {
+                  "layer": "blockchain",
+                  "description": "Read trigger conditions and data source configuration"
+                },
+                {
+                  "layer": "ui",
+                  "description": "Render monitoring chart, stats, trigger conditions, and agreements"
+                }
+              ],
+              "outcome": "User sees full pool details with real-time monitoring data"
+            },
+            {
+              "id": "chat-with-advisor",
+              "name": "Chat with AI Advisor",
+              "trigger": "User types a question in the AI advisor panel",
+              "priority": "medium",
+              "steps": [
+                {
+                  "layer": "ui",
+                  "description": "User enters question in AI advisor chat input"
+                },
+                {
+                  "layer": "api",
+                  "description": "POST /api/ai-chat with message and pool context",
+                  "ref": "ai-chat"
+                },
+                {
+                  "layer": "external",
+                  "description": "Claude Service processes query with pool data context"
+                },
+                {
+                  "layer": "ui",
+                  "description": "Stream AI response back to chat panel"
+                }
+              ],
+              "outcome": "User receives AI-powered analysis and recommendations about the pool"
+            },
+            {
+              "id": "deposit-to-pool",
+              "name": "Deposit Liquidity",
+              "trigger": "User clicks Deposit button and fills deposit dialog",
+              "priority": "high",
+              "steps": [
+                {
+                  "layer": "ui",
+                  "description": "Open deposit dialog with amount and duration fields"
+                },
+                {
+                  "layer": "ui",
+                  "description": "User enters amount and selects lock duration"
+                },
+                {
+                  "layer": "blockchain",
+                  "description": "Approve CZUSD spending via ERC-20 approve()"
+                },
+                {
+                  "layer": "blockchain",
+                  "description": "Call InsurancePool.deposit() with amount"
+                },
+                {
+                  "layer": "ui",
+                  "description": "Show transaction confirmation and updated TVL"
+                }
+              ],
+              "outcome": "User has deposited liquidity and pool TVL is updated"
+            }
+          ]
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "id": "ai-chat",
+          "method": "POST",
+          "path": "/api/ai-chat",
+          "description": "AI advisor endpoint. Sends user message with pool context to Claude Service for streaming analysis and recommendations.",
+          "auth": false,
+          "roles": ["user"],
+          "request": {
+            "message": "string — user's question",
+            "poolAddress": "string — contract address of the pool",
+            "poolData": "object — optional pool context data"
+          },
+          "response": {
+            "stream": "ReadableStream — SSE stream of AI response chunks"
+          },
+          "serverFlow": [
+            {
+              "order": 1,
+              "layer": "validation",
+              "description": "Validate message is non-empty string"
+            },
+            {
+              "order": 2,
+              "layer": "transform",
+              "description": "Build system prompt with pool context and insurance domain knowledge"
+            },
+            {
+              "order": 3,
+              "layer": "external",
+              "description": "Call Claude Service (POST /chat) with streaming enabled"
+            },
+            {
+              "order": 4,
+              "layer": "response",
+              "description": "Pipe streaming response back to client as SSE"
+            }
+          ],
+          "calledBy": ["pool-detail"],
+          "errorResponses": [
+            {
+              "status": 400,
+              "code": "INVALID_MESSAGE",
+              "description": "Message is empty or missing",
+              "when": "Request body has no message field"
+            },
+            {
+              "status": 502,
+              "code": "AI_SERVICE_ERROR",
+              "description": "Claude Service is unavailable",
+              "when": "Claude Service returns error or is unreachable"
+            }
+          ]
+        }
+      ],
+      "dbTables": [],
+      "contracts": ["ClaimZeroFactory", "InsurancePool"],
+      "services": ["Claude Service"]
+    },
+    {
+      "id": "acquire",
+      "name": "Policy Acquisition",
+      "description": "Multi-step wizard for purchasing insurance coverage. Eligibility check, payment processing via Stripe or crypto, and policy NFT minting.",
+      "color": "#10b981",
+      "icon": "ShoppingCart",
+      "screens": [
+        {
+          "id": "acquire-wizard",
+          "name": "Acquire Coverage",
+          "route": "/policies/[address]/acquire",
+          "description": "3-step wizard: Eligibility verification → Payment (Stripe or crypto) → Confirmation with policy NFT mint.",
+          "components": [
+            "acquire-client",
+            "eligibility-form",
+            "payment-selector",
+            "stripe-payment-form",
+            "header",
+            "footer"
+          ],
+          "roles": ["user"],
+          "priority": "critical",
+          "status": "implemented",
+          "dependsOn": ["pool-detail"],
+          "ui": {
+            "layout": "wizard",
+            "sections": [
+              {
+                "type": "header",
+                "title": "Get Coverage",
+                "subtitle": "Complete the steps below to purchase your insurance policy",
+                "backLink": "/policies/[address]"
+              },
+              {
+                "type": "wizard",
+                "steps": [
+                  {
+                    "id": "eligibility",
+                    "label": "Eligibility",
+                    "fields": [
+                      {
+                        "name": "location",
+                        "label": "Location",
+                        "type": "text",
+                        "required": true,
+                        "placeholder": "City, State"
+                      },
+                      {
+                        "name": "propertyType",
+                        "label": "Property Type",
+                        "type": "select",
+                        "options": [
+                          "Residential",
+                          "Commercial",
+                          "Agricultural",
+                          "Industrial"
+                        ]
+                      },
+                      {
+                        "name": "coverageAmount",
+                        "label": "Coverage Amount",
+                        "type": "currency",
+                        "required": true,
+                        "placeholder": "10000"
+                      },
+                      {
+                        "name": "duration",
+                        "label": "Coverage Duration",
+                        "type": "select",
+                        "options": [
+                          "30 days",
+                          "90 days",
+                          "180 days",
+                          "365 days"
+                        ],
+                        "required": true
+                      }
+                    ]
+                  },
+                  {
+                    "id": "payment",
+                    "label": "Payment",
+                    "fields": [
+                      {
+                        "name": "paymentMethod",
+                        "label": "Payment Method",
+                        "type": "select",
+                        "options": ["Credit Card (Stripe)", "CZUSD (On-chain)"],
+                        "required": true
+                      },
+                      {
+                        "name": "cardDetails",
+                        "label": "Card Details",
+                        "type": "text",
+                        "helperText": "Powered by Stripe",
+                        "showWhen": {
+                          "field": "paymentMethod",
+                          "value": "Credit Card (Stripe)"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "confirm",
+                    "label": "Confirm",
+                    "fields": [
+                      {
+                        "name": "reviewTerms",
+                        "label": "I agree to the insurance terms and conditions",
+                        "type": "checkbox",
+                        "required": true
+                      },
+                      {
+                        "name": "reviewPayout",
+                        "label": "I understand payouts are automatic and parametric",
+                        "type": "checkbox",
+                        "required": true
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "appFlows": [
+            {
+              "id": "purchase-with-stripe",
+              "name": "Purchase Policy with Credit Card",
+              "trigger": "User completes eligibility and selects Stripe payment",
+              "priority": "critical",
+              "steps": [
+                {
+                  "layer": "ui",
+                  "description": "User fills eligibility form (location, property type, coverage amount)"
+                },
+                {
+                  "layer": "api",
+                  "description": "POST /api/eligibility to verify user meets pool requirements",
+                  "ref": "eligibility"
+                },
+                {
+                  "layer": "ui",
+                  "description": "Show payment step with Stripe Elements form"
+                },
+                {
+                  "layer": "api",
+                  "description": "POST /api/stripe-payment to create PaymentIntent",
+                  "ref": "stripe-payment"
+                },
+                {
+                  "layer": "external",
+                  "description": "Stripe processes payment and sends webhook"
+                },
+                {
+                  "layer": "api",
+                  "description": "POST /api/stripe-webhook receives confirmation",
+                  "ref": "stripe-webhook"
+                },
+                {
+                  "layer": "blockchain",
+                  "description": "Mint PolicyNFT to user's wallet via InsurancePool.purchasePolicy()"
+                },
+                {
+                  "layer": "ui",
+                  "description": "Show confirmation with policy NFT details and coverage summary"
+                }
+              ],
+              "outcome": "User holds a PolicyNFT representing their insurance coverage"
+            },
+            {
+              "id": "purchase-with-crypto",
+              "name": "Purchase Policy with CZUSD",
+              "trigger": "User completes eligibility and selects crypto payment",
+              "priority": "high",
+              "steps": [
+                { "layer": "ui", "description": "User fills eligibility form" },
+                {
+                  "layer": "api",
+                  "description": "POST /api/eligibility to verify requirements",
+                  "ref": "eligibility"
+                },
+                {
+                  "layer": "ui",
+                  "description": "Show crypto payment with CZUSD amount"
+                },
+                {
+                  "layer": "blockchain",
+                  "description": "Approve CZUSD spending via ERC-20 approve()"
+                },
+                {
+                  "layer": "blockchain",
+                  "description": "Call InsurancePool.purchasePolicy() with premium payment"
+                },
+                {
+                  "layer": "ui",
+                  "description": "Show confirmation with policy NFT and tx hash"
+                }
+              ],
+              "outcome": "User holds a PolicyNFT, premium paid in CZUSD on-chain"
+            }
+          ]
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "id": "eligibility",
+          "method": "POST",
+          "path": "/api/eligibility",
+          "description": "Verify user eligibility for a specific insurance pool based on location, property type, and coverage requirements.",
+          "auth": false,
+          "roles": ["user"],
+          "request": {
+            "poolAddress": "string — contract address",
+            "location": "string — user location",
+            "propertyType": "string — property classification",
+            "coverageAmount": "number — requested coverage in USD"
+          },
+          "response": {
+            "eligible": "boolean",
+            "reason": "string — explanation if ineligible",
+            "premium": "number — calculated premium amount",
+            "maxCoverage": "number — maximum available coverage"
+          },
+          "serverFlow": [
+            {
+              "order": 1,
+              "layer": "validation",
+              "description": "Validate required fields (poolAddress, location, coverageAmount)"
+            },
+            {
+              "order": 2,
+              "layer": "external",
+              "description": "Check EligibilityRegistry contract for pool-specific rules"
+            },
+            {
+              "order": 3,
+              "layer": "transform",
+              "description": "Calculate premium based on coverage amount and pool parameters"
+            },
+            {
+              "order": 4,
+              "layer": "response",
+              "description": "Return eligibility status with premium quote"
+            }
+          ],
+          "calledBy": ["acquire-wizard"],
+          "errorResponses": [
+            {
+              "status": 400,
+              "code": "INVALID_PARAMS",
+              "description": "Missing required fields",
+              "when": "poolAddress or coverageAmount is missing"
+            },
+            {
+              "status": 422,
+              "code": "INELIGIBLE",
+              "description": "User does not meet pool requirements",
+              "when": "Location or property type excluded by pool rules"
+            }
+          ]
+        },
+        {
+          "id": "stripe-payment",
+          "method": "POST",
+          "path": "/api/stripe-payment",
+          "description": "Create a Stripe PaymentIntent for insurance premium payment. Returns client secret for Stripe Elements.",
+          "auth": false,
+          "roles": ["user"],
+          "request": {
+            "poolAddress": "string — contract address",
+            "amount": "number — premium amount in cents",
+            "coverageAmount": "number — coverage value",
+            "userAddress": "string — wallet address for policy minting"
+          },
+          "response": {
+            "clientSecret": "string — Stripe PaymentIntent client secret",
+            "paymentIntentId": "string — Stripe PI ID"
+          },
+          "serverFlow": [
+            {
+              "order": 1,
+              "layer": "validation",
+              "description": "Validate amount, poolAddress, and userAddress"
+            },
+            {
+              "order": 2,
+              "layer": "external",
+              "description": "Create Stripe PaymentIntent with metadata (poolAddress, userAddress, coverageAmount)"
+            },
+            {
+              "order": 3,
+              "layer": "response",
+              "description": "Return client_secret for frontend Stripe Elements"
+            }
+          ],
+          "calledBy": ["acquire-wizard"],
+          "errorResponses": [
+            {
+              "status": 400,
+              "code": "INVALID_AMOUNT",
+              "description": "Amount is zero or negative",
+              "when": "Invalid premium amount"
+            },
+            {
+              "status": 502,
+              "code": "STRIPE_ERROR",
+              "description": "Stripe API error",
+              "when": "Stripe rejects the PaymentIntent creation"
+            }
+          ]
+        },
+        {
+          "id": "stripe-webhook",
+          "method": "POST",
+          "path": "/api/stripe-webhook",
+          "description": "Stripe webhook handler. On successful payment, triggers on-chain policy minting via InsurancePool contract.",
+          "auth": false,
+          "roles": [],
+          "request": {
+            "body": "Stripe webhook event payload (raw body for signature verification)"
+          },
+          "response": {
+            "received": "boolean"
+          },
+          "serverFlow": [
+            {
+              "order": 1,
+              "layer": "validation",
+              "description": "Verify Stripe webhook signature using STRIPE_WEBHOOK_SECRET"
+            },
+            {
+              "order": 2,
+              "layer": "transform",
+              "description": "Extract payment metadata (poolAddress, userAddress, coverageAmount)"
+            },
+            {
+              "order": 3,
+              "layer": "external",
+              "description": "Call InsurancePool.purchasePolicy() with server wallet to mint PolicyNFT"
+            },
+            {
+              "order": 4,
+              "layer": "response",
+              "description": "Return 200 acknowledgment to Stripe"
+            }
+          ],
+          "calledBy": [],
+          "errorResponses": [
+            {
+              "status": 400,
+              "code": "INVALID_SIGNATURE",
+              "description": "Webhook signature verification failed",
+              "when": "Stripe signature doesn't match secret"
+            },
+            {
+              "status": 500,
+              "code": "MINT_FAILED",
+              "description": "On-chain policy minting failed",
+              "when": "Contract call reverts or wallet has insufficient gas"
+            }
+          ]
+        }
+      ],
+      "dbTables": [],
+      "contracts": ["InsurancePool", "PolicyNFT", "EligibilityRegistry"],
+      "services": ["Stripe"]
+    },
+    {
+      "id": "coverage",
+      "name": "My Coverage",
+      "description": "Dashboard showing user's active policies, coverage status, and claim history. Filter by status, view policy details.",
+      "color": "#8b5cf6",
+      "icon": "ShieldCheck",
+      "screens": [
+        {
+          "id": "my-coverage",
+          "name": "My Coverage",
+          "route": "/coverage",
+          "description": "Cards grid showing user's policies with status filter tabs (Active, Settled, Expired, All). Each card shows coverage details and links to pool.",
+          "components": [
+            "coverage-client",
+            "policy-card",
+            "policy-table",
+            "header",
+            "footer"
+          ],
+          "roles": ["user"],
+          "priority": "high",
+          "status": "implemented",
+          "ui": {
+            "layout": "page-with-header",
+            "sections": [
+              {
+                "type": "header",
+                "title": "My Coverage",
+                "subtitle": "Your active insurance policies and claim history",
+                "actions": [
+                  {
+                    "label": "Browse Pools",
+                    "icon": "Search",
+                    "variant": "outline",
+                    "action": "navigate",
+                    "target": "/policies"
+                  }
+                ]
+              },
+              {
+                "type": "stats-grid",
+                "columns": 3,
+                "stats": [
+                  {
+                    "label": "Active Policies",
+                    "value": "3",
+                    "icon": "Shield",
+                    "color": "#10b981"
+                  },
+                  {
+                    "label": "Total Coverage",
+                    "value": "$30K",
+                    "icon": "DollarSign",
+                    "color": "#3b82f6"
+                  },
+                  {
+                    "label": "Claims Received",
+                    "value": "$5K",
+                    "icon": "CheckCircle",
+                    "color": "#8b5cf6"
+                  }
+                ]
+              },
+              {
+                "type": "tabs",
+                "tabs": [
+                  {
+                    "id": "active",
+                    "label": "Active",
+                    "icon": "Shield",
+                    "content": [
+                      {
+                        "type": "cards-grid",
+                        "columns": 3,
+                        "cards": [
+                          {
+                            "title": "Weather Protection — NYC",
+                            "subtitle": "Expires in 45 days",
+                            "icon": "Cloud",
+                            "badge": { "label": "Active", "color": "#10b981" },
+                            "fields": [
+                              { "label": "Coverage", "value": "$10,000" },
+                              { "label": "Premium Paid", "value": "$50" },
+                              { "label": "Pool", "value": "0x1234...5678" }
+                            ],
+                            "actions": [
+                              {
+                                "label": "View Pool",
+                                "icon": "ExternalLink",
+                                "variant": "ghost",
+                                "action": "navigate",
+                                "target": "/policies/[address]"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "id": "settled",
+                    "label": "Settled",
+                    "icon": "CheckCircle",
+                    "content": [
+                      {
+                        "type": "cards-grid",
+                        "columns": 3,
+                        "cards": [
+                          {
+                            "title": "Flight Delay — JFK-LAX",
+                            "subtitle": "Settled on Feb 15, 2026",
+                            "icon": "Plane",
+                            "badge": { "label": "Settled", "color": "#f59e0b" },
+                            "fields": [
+                              { "label": "Payout", "value": "$5,000" },
+                              { "label": "Trigger", "value": "Delay > 3 hours" }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "id": "all",
+                    "label": "All Policies",
+                    "icon": "List",
+                    "content": [
+                      {
+                        "type": "data-table",
+                        "columns": [
+                          { "key": "pool", "label": "Pool", "type": "text" },
+                          {
+                            "key": "coverage",
+                            "label": "Coverage",
+                            "type": "currency"
+                          },
+                          {
+                            "key": "status",
+                            "label": "Status",
+                            "type": "badge"
+                          },
+                          {
+                            "key": "expiry",
+                            "label": "Expiry",
+                            "type": "date"
+                          },
+                          {
+                            "key": "payout",
+                            "label": "Payout",
+                            "type": "currency"
+                          }
+                        ],
+                        "pagination": true,
+                        "emptyMessage": "You don't have any policies yet. Browse the marketplace to get started."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "appFlows": [
+            {
+              "id": "view-my-policies",
+              "name": "View My Policies",
+              "trigger": "User navigates to /coverage",
+              "priority": "high",
+              "steps": [
+                {
+                  "layer": "ui",
+                  "description": "Page loads with auth check — user must be connected"
+                },
+                {
+                  "layer": "blockchain",
+                  "description": "Query PolicyNFT contract for user's token IDs"
+                },
+                {
+                  "layer": "blockchain",
+                  "description": "For each token, read policy details from InsurancePool"
+                },
+                {
+                  "layer": "ui",
+                  "description": "Render policy cards grouped by status (Active, Settled, Expired)"
+                }
+              ],
+              "outcome": "User sees all their insurance policies with current status and coverage details"
+            }
+          ]
+        }
+      ],
+      "apiEndpoints": [],
+      "dbTables": [],
+      "contracts": ["PolicyNFT", "InsurancePool"]
+    },
+    {
+      "id": "create",
+      "name": "Pool Creation",
+      "description": "4-step wizard for creating new insurance pools. Configure data sources, trigger conditions, agreements, and deploy the pool contract.",
+      "color": "#f59e0b",
+      "icon": "PlusCircle",
+      "screens": [
+        {
+          "id": "create-wizard",
+          "name": "Create Pool",
+          "route": "/create",
+          "description": "4-step wizard: Data Sources → Trigger Conditions → Agreements → Deploy. Creates an InsurancePool via ClaimZeroFactory.",
+          "components": [
+            "create-client",
+            "step-sources",
+            "step-trigger",
+            "step-agreements",
+            "step-deploy",
+            "header",
+            "footer"
+          ],
+          "roles": ["admin"],
+          "priority": "high",
+          "status": "implemented",
+          "ui": {
+            "layout": "wizard",
+            "sections": [
+              {
+                "type": "header",
+                "title": "Create Insurance Pool",
+                "subtitle": "Configure and deploy a new parametric insurance pool",
+                "backLink": "/policies"
+              },
+              {
+                "type": "wizard",
+                "steps": [
+                  {
+                    "id": "sources",
+                    "label": "Data Sources",
+                    "fields": [
+                      {
+                        "name": "sourceType",
+                        "label": "Source Type",
+                        "type": "select",
+                        "options": [
+                          "Weather API",
+                          "Flight API",
+                          "Seismic API",
+                          "Custom HTTP"
+                        ],
+                        "required": true
+                      },
+                      {
+                        "name": "primaryUrl",
+                        "label": "Primary Source URL",
+                        "type": "text",
+                        "required": true,
+                        "placeholder": "https://api.openweathermap.org/..."
+                      },
+                      {
+                        "name": "secondaryUrl",
+                        "label": "Secondary Source URL",
+                        "type": "text",
+                        "placeholder": "https://api.accuweather.com/..."
+                      },
+                      {
+                        "name": "pollInterval",
+                        "label": "Poll Interval",
+                        "type": "select",
+                        "options": [
+                          "5 minutes",
+                          "15 minutes",
+                          "1 hour",
+                          "6 hours",
+                          "24 hours"
+                        ],
+                        "required": true
+                      }
+                    ]
+                  },
+                  {
+                    "id": "trigger",
+                    "label": "Trigger Conditions",
+                    "fields": [
+                      {
+                        "name": "metric",
+                        "label": "Metric",
+                        "type": "text",
+                        "required": true,
+                        "placeholder": "temperature"
+                      },
+                      {
+                        "name": "operator",
+                        "label": "Operator",
+                        "type": "select",
+                        "options": ["<", "<=", ">", ">=", "==", "!="],
+                        "required": true
+                      },
+                      {
+                        "name": "threshold",
+                        "label": "Threshold Value",
+                        "type": "number",
+                        "required": true
+                      },
+                      {
+                        "name": "duration",
+                        "label": "Sustained Duration",
+                        "type": "select",
+                        "options": [
+                          "Instant",
+                          "1 hour",
+                          "6 hours",
+                          "24 hours",
+                          "48 hours",
+                          "7 days"
+                        ]
+                      },
+                      {
+                        "name": "consensusRequired",
+                        "label": "Require Multi-Source Consensus",
+                        "type": "toggle"
+                      }
+                    ]
+                  },
+                  {
+                    "id": "agreements",
+                    "label": "Agreements",
+                    "fields": [
+                      {
+                        "name": "poolName",
+                        "label": "Pool Name",
+                        "type": "text",
+                        "required": true,
+                        "placeholder": "Weather Protection — NYC"
+                      },
+                      {
+                        "name": "description",
+                        "label": "Description",
+                        "type": "textarea",
+                        "required": true
+                      },
+                      {
+                        "name": "premium",
+                        "label": "Monthly Premium (USD)",
+                        "type": "currency",
+                        "required": true
+                      },
+                      {
+                        "name": "maxCoverage",
+                        "label": "Max Coverage per Policy",
+                        "type": "currency",
+                        "required": true
+                      },
+                      {
+                        "name": "minDeposit",
+                        "label": "Minimum Pool Deposit",
+                        "type": "currency",
+                        "required": true
+                      },
+                      {
+                        "name": "agreementText",
+                        "label": "Custom Agreement Text",
+                        "type": "textarea"
+                      }
+                    ]
+                  },
+                  {
+                    "id": "deploy",
+                    "label": "Deploy",
+                    "fields": [
+                      {
+                        "name": "reviewAll",
+                        "label": "I have reviewed all pool parameters",
+                        "type": "checkbox",
+                        "required": true
+                      },
+                      {
+                        "name": "initialDeposit",
+                        "label": "Initial Deposit (CZUSD)",
+                        "type": "currency",
+                        "required": true,
+                        "placeholder": "10000"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "appFlows": [
+            {
+              "id": "create-and-deploy-pool",
+              "name": "Create and Deploy Pool",
+              "trigger": "Admin fills all wizard steps and clicks Deploy",
+              "priority": "high",
+              "steps": [
+                {
+                  "layer": "ui",
+                  "description": "User configures data sources (primary + secondary URLs, poll interval)"
+                },
+                {
+                  "layer": "ui",
+                  "description": "User defines trigger conditions (metric, operator, threshold, duration)"
+                },
+                {
+                  "layer": "ui",
+                  "description": "User sets agreement terms (name, premium, coverage, deposit)"
+                },
+                {
+                  "layer": "ui",
+                  "description": "User reviews all parameters and enters initial deposit"
+                },
+                {
+                  "layer": "blockchain",
+                  "description": "Approve CZUSD spending for initial deposit"
+                },
+                {
+                  "layer": "blockchain",
+                  "description": "Call ClaimZeroFactory.createPool() with all parameters"
+                },
+                {
+                  "layer": "api",
+                  "description": "POST /api/activate-pool to register CRE workflow",
+                  "ref": "activate-pool"
+                },
+                {
+                  "layer": "external",
+                  "description": "CRE Gateway creates cron trigger + HTTP client + consensus workflow"
+                },
+                {
+                  "layer": "ui",
+                  "description": "Show success with new pool address and link to pool detail"
+                }
+              ],
+              "outcome": "New insurance pool is deployed with CRE monitoring workflow active"
+            }
+          ]
+        }
+      ],
+      "apiEndpoints": [
+        {
+          "id": "activate-pool",
+          "method": "POST",
+          "path": "/api/activate-pool",
+          "description": "Activate a newly created insurance pool by registering its CRE workflow. Sets up cron trigger, HTTP data sources, consensus, and EVM write actions.",
+          "auth": true,
+          "roles": ["admin"],
+          "request": {
+            "poolAddress": "string — deployed pool contract address",
+            "sources": "object[] — data source configurations",
+            "trigger": "object — trigger condition parameters",
+            "cronSchedule": "string — cron expression for polling"
+          },
+          "response": {
+            "workflowId": "string — CRE workflow identifier",
+            "status": "string — activation status"
+          },
+          "serverFlow": [
+            {
+              "order": 1,
+              "layer": "auth",
+              "description": "Verify caller is pool creator (admin)"
+            },
+            {
+              "order": 2,
+              "layer": "validation",
+              "description": "Validate pool exists on-chain and is in FUNDING state"
+            },
+            {
+              "order": 3,
+              "layer": "external",
+              "description": "Register CRE workflow via CRE Gateway API (cron trigger + HTTP sources + consensus + EVM write)"
+            },
+            {
+              "order": 4,
+              "layer": "external",
+              "description": "Configure Gemini TEE for AI adjudication fallback"
+            },
+            {
+              "order": 5,
+              "layer": "response",
+              "description": "Return workflow ID and activation confirmation"
+            }
+          ],
+          "calledBy": ["create-wizard"],
+          "errorResponses": [
+            {
+              "status": 401,
+              "code": "UNAUTHORIZED",
+              "description": "Caller is not pool creator",
+              "when": "Connected wallet doesn't match pool creator address"
+            },
+            {
+              "status": 404,
+              "code": "POOL_NOT_FOUND",
+              "description": "Pool contract not found on-chain",
+              "when": "Invalid pool address"
+            },
+            {
+              "status": 502,
+              "code": "CRE_ERROR",
+              "description": "CRE Gateway registration failed",
+              "when": "CRE API is unreachable or rejects workflow config"
+            }
+          ]
+        }
+      ],
+      "dbTables": [],
+      "contracts": ["ClaimZeroFactory", "InsurancePool", "CRERouter"],
+      "services": ["CRE Gateway"]
+    },
+    {
+      "id": "payments",
+      "name": "Payments Infrastructure",
+      "description": "Cross-cutting payment infrastructure. Stripe integration for fiat payments, CZUSD stablecoin for on-chain payments, and currency conversion.",
+      "color": "#ec4899",
+      "icon": "CreditCard",
+      "screens": [],
+      "apiEndpoints": [],
+      "dbTables": [],
+      "contracts": ["CZUSD", "CZUSDConsumer"],
+      "services": ["Stripe", "CZUSD Converter"]
+    },
+    {
+      "id": "compliance",
+      "name": "ACE Compliance Engine",
+      "description": "Automated Compliance Engine with on-chain policy engines. Enforces solvency, KYC, sanctions, premium volume, eligibility, and cooling-off rules.",
+      "color": "#ef4444",
+      "icon": "Scale",
+      "screens": [],
+      "apiEndpoints": [],
+      "dbTables": [],
+      "contracts": [
+        "PolicyEngine",
+        "SolvencyPolicy",
+        "PremiumVolumePolicy",
+        "EligibilityPolicy",
+        "KYCPolicy",
+        "SanctionsPolicy",
+        "CoolingOffPolicy",
+        "UnifiedExtractor"
+      ],
+      "services": ["ComplianceConsumer"]
+    }
+  ],
+  "flows": [
+    {
+      "id": "browse-and-explore",
+      "name": "Browse and Explore Pools",
+      "description": "User browses the marketplace, searches and filters pools, views pool details, and explores coverage options.",
+      "trigger": "User visits the app or navigates to /policies",
+      "priority": "critical",
+      "module": "marketplace",
+      "steps": [
+        {
+          "order": 1,
+          "layer": "ui",
+          "action": "Navigate to /policies marketplace page",
+          "screen": "policies-list",
+          "expectedResult": "Pool grid/table loads with stats"
+        },
+        {
+          "order": 2,
+          "layer": "ui",
+          "action": "Search and filter pools by type",
+          "screen": "policies-list",
+          "expectedResult": "Filtered results displayed"
+        },
+        {
+          "order": 3,
+          "layer": "ui",
+          "action": "Click on a pool card to view details",
+          "screen": "policies-list",
+          "expectedResult": "Navigate to /policies/[address]"
+        },
+        {
+          "order": 4,
+          "layer": "blockchain",
+          "action": "Read pool data from InsurancePool contract",
+          "contract": "InsurancePool",
+          "expectedResult": "Pool details loaded (TVL, premium, coverage, state)"
+        },
+        {
+          "order": 5,
+          "layer": "ui",
+          "action": "View monitoring chart, trigger conditions, and agreements",
+          "screen": "pool-detail",
+          "expectedResult": "Full pool detail rendered with real-time data"
+        }
+      ],
+      "outcome": "User has explored the marketplace and understands available insurance options",
+      "tags": ["discovery", "marketplace", "onboarding"]
+    },
+    {
+      "id": "purchase-policy",
+      "name": "Purchase Insurance Policy",
+      "description": "Complete end-to-end flow from pool selection through eligibility check, payment, and policy NFT minting.",
+      "trigger": "User clicks Get Coverage on a pool detail page",
+      "priority": "critical",
+      "module": "acquire",
+      "steps": [
+        {
+          "order": 1,
+          "layer": "ui",
+          "action": "Click Get Coverage button on pool detail",
+          "screen": "pool-detail",
+          "expectedResult": "Navigate to /policies/[address]/acquire"
+        },
+        {
+          "order": 2,
+          "layer": "ui",
+          "action": "Fill eligibility form (location, property type, coverage amount)",
+          "screen": "acquire-wizard",
+          "expectedResult": "Form validated client-side"
+        },
+        {
+          "order": 3,
+          "layer": "api",
+          "action": "Submit eligibility check",
+          "endpoint": "eligibility",
+          "expectedResult": "Eligible with premium quote returned"
+        },
+        {
+          "order": 4,
+          "layer": "ui",
+          "action": "Select payment method (Stripe or CZUSD)",
+          "screen": "acquire-wizard",
+          "expectedResult": "Payment form displayed"
+        },
+        {
+          "order": 5,
+          "layer": "api",
+          "action": "Create Stripe PaymentIntent (if fiat)",
+          "endpoint": "stripe-payment",
+          "expectedResult": "Client secret returned"
+        },
+        {
+          "order": 6,
+          "layer": "external",
+          "action": "Process payment via Stripe or approve CZUSD on-chain",
+          "service": "Stripe",
+          "expectedResult": "Payment confirmed"
+        },
+        {
+          "order": 7,
+          "layer": "blockchain",
+          "action": "Mint PolicyNFT to user's wallet",
+          "contract": "PolicyNFT",
+          "expectedResult": "NFT minted with policy metadata"
+        },
+        {
+          "order": 8,
+          "layer": "ui",
+          "action": "Show confirmation with policy details",
+          "screen": "acquire-wizard",
+          "expectedResult": "Policy NFT ID and coverage summary displayed"
+        }
+      ],
+      "outcome": "User holds a PolicyNFT and has active insurance coverage",
+      "tags": ["purchase", "payment", "minting", "critical-path"]
+    },
+    {
+      "id": "create-pool",
+      "name": "Create Insurance Pool",
+      "description": "Admin creates a new parametric insurance pool with custom data sources, trigger conditions, and deploys it with CRE monitoring.",
+      "trigger": "Admin clicks Create Pool and begins the wizard",
+      "priority": "high",
+      "module": "create",
+      "steps": [
+        {
+          "order": 1,
+          "layer": "ui",
+          "action": "Navigate to /create wizard",
+          "screen": "create-wizard",
+          "expectedResult": "4-step wizard loads"
+        },
+        {
+          "order": 2,
+          "layer": "ui",
+          "action": "Configure data sources (primary + secondary URLs, poll interval)",
+          "screen": "create-wizard",
+          "expectedResult": "Source configuration saved"
+        },
+        {
+          "order": 3,
+          "layer": "ui",
+          "action": "Define trigger conditions (metric, operator, threshold, duration)",
+          "screen": "create-wizard",
+          "expectedResult": "Trigger parameters set"
+        },
+        {
+          "order": 4,
+          "layer": "ui",
+          "action": "Set agreement terms (name, premium, coverage limits, text)",
+          "screen": "create-wizard",
+          "expectedResult": "Agreement configured"
+        },
+        {
+          "order": 5,
+          "layer": "blockchain",
+          "action": "Deploy pool via ClaimZeroFactory.createPool()",
+          "contract": "ClaimZeroFactory",
+          "expectedResult": "New InsurancePool contract deployed"
+        },
+        {
+          "order": 6,
+          "layer": "api",
+          "action": "Activate CRE workflow for the pool",
+          "endpoint": "activate-pool",
+          "expectedResult": "CRE workflow registered and active"
+        },
+        {
+          "order": 7,
+          "layer": "external",
+          "action": "CRE Gateway sets up cron trigger + HTTP client + consensus",
+          "service": "CRE Gateway",
+          "expectedResult": "Monitoring workflow running"
+        }
+      ],
+      "outcome": "New insurance pool is live with automated CRE monitoring and trigger detection",
+      "tags": ["admin", "deployment", "cre"]
+    },
+    {
+      "id": "view-coverage",
+      "name": "View My Coverage",
+      "description": "User checks their active policies, coverage status, and any settled claims.",
+      "trigger": "User navigates to /coverage from header nav",
+      "priority": "high",
+      "module": "coverage",
+      "steps": [
+        {
+          "order": 1,
+          "layer": "ui",
+          "action": "Navigate to /coverage dashboard",
+          "screen": "my-coverage",
+          "expectedResult": "Coverage page loads"
+        },
+        {
+          "order": 2,
+          "layer": "blockchain",
+          "action": "Query PolicyNFT balanceOf for connected wallet",
+          "contract": "PolicyNFT",
+          "expectedResult": "Token IDs returned"
+        },
+        {
+          "order": 3,
+          "layer": "blockchain",
+          "action": "Read policy details for each token from InsurancePool",
+          "contract": "InsurancePool",
+          "expectedResult": "Policy metadata loaded"
+        },
+        {
+          "order": 4,
+          "layer": "ui",
+          "action": "Display policy cards with status tabs (Active/Settled/All)",
+          "screen": "my-coverage",
+          "expectedResult": "Policies grouped by status"
+        }
+      ],
+      "outcome": "User sees complete overview of their insurance portfolio",
+      "tags": ["dashboard", "portfolio"]
+    },
+    {
+      "id": "ai-advisor-chat",
+      "name": "AI Advisor Chat",
+      "description": "User interacts with AI advisor on a pool detail page to get risk analysis, coverage recommendations, and pool insights.",
+      "trigger": "User types a question in the AI advisor panel on pool detail",
+      "priority": "medium",
+      "module": "marketplace",
+      "steps": [
+        {
+          "order": 1,
+          "layer": "ui",
+          "action": "User types question in AI advisor chat input",
+          "screen": "pool-detail",
+          "expectedResult": "Message sent to API"
+        },
+        {
+          "order": 2,
+          "layer": "api",
+          "action": "POST /api/ai-chat with message and pool context",
+          "endpoint": "ai-chat",
+          "expectedResult": "Streaming response initiated"
+        },
+        {
+          "order": 3,
+          "layer": "external",
+          "action": "Claude Service processes query with insurance domain context",
+          "service": "Claude Service",
+          "expectedResult": "AI generates analysis"
+        },
+        {
+          "order": 4,
+          "layer": "ui",
+          "action": "Stream response tokens into chat panel",
+          "screen": "pool-detail",
+          "expectedResult": "AI response displayed in real-time"
+        }
+      ],
+      "outcome": "User receives personalized AI analysis about the insurance pool",
+      "tags": ["ai", "chat", "advisory"]
+    },
+    {
+      "id": "cre-trigger-settlement",
+      "name": "CRE Trigger & Settlement",
+      "description": "Automated flow: CRE detects trigger condition via multi-source data, AI adjudicates in TEE, and payouts execute on-chain.",
+      "trigger": "CRE cron trigger fires and fetches data from configured sources",
+      "priority": "critical",
+      "module": "compliance",
+      "steps": [
+        {
+          "order": 1,
+          "layer": "external",
+          "action": "CRE cron trigger fires on schedule",
+          "service": "CRE Gateway",
+          "expectedResult": "Workflow execution started"
+        },
+        {
+          "order": 2,
+          "layer": "external",
+          "action": "HTTP Client fetches data from primary + secondary sources",
+          "service": "CRE Gateway",
+          "expectedResult": "Raw data from multiple APIs"
+        },
+        {
+          "order": 3,
+          "layer": "external",
+          "action": "CRE Consensus validates multi-source data agreement",
+          "service": "CRE Gateway",
+          "expectedResult": "Consensus reached on trigger data"
+        },
+        {
+          "order": 4,
+          "layer": "ai",
+          "action": "Gemini TEE adjudicates claim based on trigger data and policy terms",
+          "service": "Gemini TEE",
+          "expectedResult": "Adjudication decision (approve/deny)"
+        },
+        {
+          "order": 5,
+          "layer": "contract",
+          "action": "CRERouter.handleCallback() receives settlement decision",
+          "contract": "CRERouter",
+          "expectedResult": "Callback processed"
+        },
+        {
+          "order": 6,
+          "layer": "contract",
+          "action": "InsurancePool.settle() executes payouts to all affected PolicyNFT holders",
+          "contract": "InsurancePool",
+          "expectedResult": "CZUSD transferred to policyholders"
+        },
+        {
+          "order": 7,
+          "layer": "contract",
+          "action": "ACE PolicyEngine validates compliance (solvency, sanctions, cooling-off)",
+          "contract": "PolicyEngine",
+          "expectedResult": "All compliance checks pass"
+        }
+      ],
+      "outcome": "Policyholders receive automatic payouts when trigger conditions are met — no claims process needed",
+      "tags": ["cre", "automation", "settlement", "ai", "compliance"]
+    }
+  ],
+  "infrastructure": {
+    "blockchainNetworks": [
+      {
+        "id": "base-sepolia",
+        "name": "Avalanche Fuji",
+        "chainId": 43113,
+        "type": "evm",
+        "rpcUrl": "https://sepolia.base.org",
+        "explorerUrl": "https://sepolia.basescan.org",
+        "contracts": [
+          {
+            "id": "claim-zero-factory",
+            "name": "ClaimZeroFactory",
+            "description": "Factory contract that creates and registers new InsurancePool instances.",
+            "functions": [
+              {
+                "name": "createPool",
+                "type": "write",
+                "description": "Deploy a new InsurancePool with specified parameters",
+                "params": {
+                  "name": "string",
+                  "premium": "uint256",
+                  "maxCoverage": "uint256",
+                  "triggerConfig": "bytes"
+                },
+                "returns": "address"
+              },
+              {
+                "name": "getPool",
+                "type": "read",
+                "description": "Get pool address by index",
+                "params": { "index": "uint256" },
+                "returns": "address"
+              },
+              {
+                "name": "poolCount",
+                "type": "read",
+                "description": "Total number of deployed pools",
+                "returns": "uint256"
+              }
+            ]
+          },
+          {
+            "id": "insurance-pool",
+            "name": "InsurancePool",
+            "description": "Core insurance pool contract. Manages deposits, policies, trigger conditions, and settlement payouts.",
+            "functions": [
+              {
+                "name": "deposit",
+                "type": "write",
+                "description": "Deposit liquidity into the pool",
+                "params": { "amount": "uint256" }
+              },
+              {
+                "name": "purchasePolicy",
+                "type": "write",
+                "description": "Purchase a policy and mint PolicyNFT",
+                "params": { "buyer": "address", "coverageAmount": "uint256" }
+              },
+              {
+                "name": "settle",
+                "type": "write",
+                "description": "Settle the pool and distribute payouts",
+                "params": { "triggerData": "bytes" }
+              },
+              {
+                "name": "getPoolState",
+                "type": "read",
+                "description": "Get current pool state (FUNDING, ACTIVE, SETTLED, etc.)",
+                "returns": "uint8"
+              },
+              {
+                "name": "totalValueLocked",
+                "type": "read",
+                "description": "Total deposits in the pool",
+                "returns": "uint256"
+              },
+              {
+                "name": "PoolSettled",
+                "type": "event",
+                "description": "Emitted when pool settles and payouts are distributed"
+              }
+            ]
+          },
+          {
+            "id": "policy-nft",
+            "name": "PolicyNFT",
+            "description": "ERC-721 NFT representing insurance policies. Each token stores coverage details and payout status.",
+            "functions": [
+              {
+                "name": "mint",
+                "type": "write",
+                "description": "Mint a new policy NFT",
+                "params": { "to": "address", "policyData": "bytes" }
+              },
+              {
+                "name": "getPolicyData",
+                "type": "read",
+                "description": "Read policy metadata for a token",
+                "params": { "tokenId": "uint256" },
+                "returns": "PolicyData"
+              },
+              {
+                "name": "balanceOf",
+                "type": "read",
+                "description": "Number of policies held by address",
+                "params": { "owner": "address" },
+                "returns": "uint256"
+              }
+            ]
+          },
+          {
+            "id": "cre-router",
+            "name": "CRERouter",
+            "description": "Routes CRE callback data to the appropriate InsurancePool for trigger evaluation and settlement.",
+            "functions": [
+              {
+                "name": "handleCallback",
+                "type": "write",
+                "description": "Process CRE workflow callback with trigger data",
+                "params": { "poolAddress": "address", "triggerData": "bytes" }
+              },
+              {
+                "name": "registerPool",
+                "type": "write",
+                "description": "Register a pool for CRE callbacks",
+                "params": { "poolAddress": "address", "workflowId": "bytes32" }
+              }
+            ]
+          },
+          {
+            "id": "eligibility-registry",
+            "name": "EligibilityRegistry",
+            "description": "On-chain registry of eligibility rules per pool. Stores location restrictions, property types, and coverage limits.",
+            "functions": [
+              {
+                "name": "setRules",
+                "type": "write",
+                "description": "Set eligibility rules for a pool",
+                "params": { "poolAddress": "address", "rules": "bytes" }
+              },
+              {
+                "name": "checkEligibility",
+                "type": "read",
+                "description": "Check if a user meets pool requirements",
+                "params": { "poolAddress": "address", "user": "address" },
+                "returns": "bool"
+              }
+            ]
+          },
+          {
+            "id": "compliance-consumer",
+            "name": "ComplianceConsumer",
+            "description": "CRE consumer that feeds compliance data (KYC, sanctions) into the ACE PolicyEngine.",
+            "functions": [
+              {
+                "name": "requestComplianceCheck",
+                "type": "write",
+                "description": "Request off-chain compliance verification via CRE",
+                "params": { "user": "address" }
+              },
+              {
+                "name": "fulfillCompliance",
+                "type": "write",
+                "description": "CRE callback with compliance result",
+                "params": { "requestId": "bytes32", "result": "bytes" }
+              }
+            ]
+          },
+          {
+            "id": "czusd-consumer",
+            "name": "CZUSDConsumer",
+            "description": "Consumer contract for CZUSD stablecoin operations — minting, burning, and cross-chain transfers.",
+            "functions": [
+              {
+                "name": "mint",
+                "type": "write",
+                "description": "Mint CZUSD tokens",
+                "params": { "to": "address", "amount": "uint256" }
+              },
+              {
+                "name": "burn",
+                "type": "write",
+                "description": "Burn CZUSD tokens",
+                "params": { "amount": "uint256" }
+              }
+            ]
+          },
+          {
+            "id": "czusd",
+            "name": "CZUSD",
+            "description": "ERC-20 stablecoin (pegged to CZUSD) used for premiums, deposits, and payouts.",
+            "functions": [
+              {
+                "name": "approve",
+                "type": "write",
+                "description": "Approve spending allowance",
+                "params": { "spender": "address", "amount": "uint256" },
+                "returns": "bool"
+              },
+              {
+                "name": "transfer",
+                "type": "write",
+                "description": "Transfer tokens",
+                "params": { "to": "address", "amount": "uint256" },
+                "returns": "bool"
+              },
+              {
+                "name": "balanceOf",
+                "type": "read",
+                "description": "Get token balance",
+                "params": { "account": "address" },
+                "returns": "uint256"
+              }
+            ]
+          },
+          {
+            "id": "policy-engine",
+            "name": "PolicyEngine",
+            "description": "ACE base policy engine that orchestrates compliance checks across all registered policies.",
+            "functions": [
+              {
+                "name": "evaluate",
+                "type": "read",
+                "description": "Run all registered policies against a transaction",
+                "params": { "context": "bytes" },
+                "returns": "bool"
+              },
+              {
+                "name": "registerPolicy",
+                "type": "write",
+                "description": "Register a new compliance policy",
+                "params": { "policy": "address" }
+              }
+            ]
+          },
+          {
+            "id": "solvency-policy",
+            "name": "SolvencyPolicy",
+            "description": "ACE policy ensuring pool maintains minimum solvency ratio before allowing new policies.",
+            "functions": [
+              {
+                "name": "check",
+                "type": "read",
+                "description": "Verify pool solvency ratio meets threshold",
+                "params": { "pool": "address" },
+                "returns": "bool"
+              }
+            ]
+          },
+          {
+            "id": "premium-volume-policy",
+            "name": "PremiumVolumePolicy",
+            "description": "ACE policy enforcing premium volume limits to prevent over-exposure.",
+            "functions": [
+              {
+                "name": "check",
+                "type": "read",
+                "description": "Verify premium volume within acceptable range",
+                "params": { "pool": "address" },
+                "returns": "bool"
+              }
+            ]
+          },
+          {
+            "id": "eligibility-policy",
+            "name": "EligibilityPolicy",
+            "description": "ACE policy for on-chain eligibility verification during policy purchase.",
+            "functions": [
+              {
+                "name": "check",
+                "type": "read",
+                "description": "Verify buyer eligibility",
+                "params": { "buyer": "address", "pool": "address" },
+                "returns": "bool"
+              }
+            ]
+          },
+          {
+            "id": "kyc-policy",
+            "name": "KYCPolicy",
+            "description": "ACE policy enforcing KYC requirements for high-value policies.",
+            "functions": [
+              {
+                "name": "check",
+                "type": "read",
+                "description": "Verify KYC status",
+                "params": { "user": "address" },
+                "returns": "bool"
+              }
+            ]
+          },
+          {
+            "id": "sanctions-policy",
+            "name": "SanctionsPolicy",
+            "description": "ACE policy screening against sanctions lists.",
+            "functions": [
+              {
+                "name": "check",
+                "type": "read",
+                "description": "Screen address against sanctions",
+                "params": { "user": "address" },
+                "returns": "bool"
+              }
+            ]
+          },
+          {
+            "id": "cooling-off-policy",
+            "name": "CoolingOffPolicy",
+            "description": "ACE policy enforcing cooling-off periods after policy purchase or claim.",
+            "functions": [
+              {
+                "name": "check",
+                "type": "read",
+                "description": "Verify cooling-off period has elapsed",
+                "params": { "user": "address", "pool": "address" },
+                "returns": "bool"
+              }
+            ]
+          },
+          {
+            "id": "unified-extractor",
+            "name": "UnifiedExtractor",
+            "description": "ACE utility contract for extracting and normalizing data from various contract call contexts.",
+            "functions": [
+              {
+                "name": "extract",
+                "type": "read",
+                "description": "Extract structured data from raw context bytes",
+                "params": { "context": "bytes" },
+                "returns": "bytes"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "externalAPIs": [
+      {
+        "id": "stripe-api",
+        "name": "Stripe API",
+        "baseUrl": "https://api.stripe.com/v1",
+        "auth": "api-key",
+        "description": "Payment processing for fiat-to-crypto premium payments. Creates PaymentIntents and handles webhooks.",
+        "endpoints": [
+          {
+            "method": "POST",
+            "path": "/payment_intents",
+            "description": "Create a PaymentIntent for premium payment"
+          },
+          {
+            "method": "POST",
+            "path": "/webhook",
+            "description": "Receive payment confirmation webhooks"
+          }
+        ]
+      }
+    ],
+    "aiServices": [
+      {
+        "id": "claude-service",
+        "name": "Claude Service",
+        "type": "llm",
+        "provider": "Anthropic (via Claude Service proxy)",
+        "description": "AI advisor for pool analysis, risk assessment, and coverage recommendations. Accessed via streaming POST /chat endpoint.",
+        "usedBy": ["ai-chat", "pool-detail"]
+      },
+      {
+        "id": "gemini-tee",
+        "name": "Gemini TEE",
+        "type": "llm",
+        "provider": "Google (via CRE TEE enclave)",
+        "description": "AI adjudication engine running inside CRE TEE. Evaluates trigger data against policy terms for automated claim settlement.",
+        "usedBy": ["cre-trigger-settlement"]
+      }
+    ],
+    "sharedServices": [
+      {
+        "id": "cre-gateway",
+        "name": "CRE Gateway",
+        "type": "server",
+        "tech": "Chainlink CRE",
+        "description": "Chainlink Compute Runtime Environment gateway. Manages cron triggers, HTTP data fetching, multi-source consensus, and EVM write callbacks.",
+        "endpoints": [
+          {
+            "method": "POST",
+            "path": "/workflows",
+            "description": "Register a new CRE workflow with trigger/action config"
+          },
+          {
+            "method": "GET",
+            "path": "/workflows/:id/status",
+            "description": "Check workflow execution status"
+          }
+        ]
+      },
+      {
+        "id": "thirdweb-connect",
+        "name": "Thirdweb Connect",
+        "type": "server",
+        "tech": "Thirdweb SDK",
+        "description": "Authentication and wallet connection. Supports email, social login, and WalletConnect. Provides embedded wallets."
+      }
+    ]
+  },
+  "fileStructure": {
+    "packages/webapp/src/app/page.tsx": "Home page — landing with CTA to marketplace",
+    "packages/webapp/src/app/layout.tsx": "Root layout with providers (auth, wallet, theme)",
+    "packages/webapp/src/app/providers.tsx": "Global providers wrapper (Thirdweb, QueryClient)",
+    "packages/webapp/src/app/policies/page.tsx": "policies-list — Insurance marketplace grid/table",
+    "packages/webapp/src/app/policies/policies-client.tsx": "policies-list — Client component with pool cards/table",
+    "packages/webapp/src/app/policies/[address]/page.tsx": "pool-detail — Pool detail server page",
+    "packages/webapp/src/app/policies/[address]/detail-client.tsx": "pool-detail — Client component with monitoring, agreements, AI",
+    "packages/webapp/src/app/policies/[address]/acquire/page.tsx": "acquire-wizard — Policy acquisition server page",
+    "packages/webapp/src/app/policies/[address]/acquire/acquire-client.tsx": "acquire-wizard — 3-step wizard client component",
+    "packages/webapp/src/app/coverage/page.tsx": "my-coverage — Coverage dashboard server page",
+    "packages/webapp/src/app/coverage/coverage-client.tsx": "my-coverage — Policy cards with status filters",
+    "packages/webapp/src/app/create/page.tsx": "create-wizard — Pool creation server page",
+    "packages/webapp/src/app/create/create-client.tsx": "create-wizard — 4-step wizard client component",
+    "packages/webapp/src/app/api/ai-chat/route.ts": "ai-chat — Claude Service streaming endpoint",
+    "packages/webapp/src/app/api/eligibility/route.ts": "eligibility — Eligibility verification endpoint",
+    "packages/webapp/src/app/api/stripe-payment/route.ts": "stripe-payment — Stripe PaymentIntent creation",
+    "packages/webapp/src/app/api/stripe-webhook/route.ts": "stripe-webhook — Stripe webhook handler + on-chain minting",
+    "packages/webapp/src/app/api/activate-pool/route.ts": "activate-pool — CRE workflow registration",
+    "packages/webapp/src/components/pool-card-wrapper.tsx": "policies-list — Pool card display component",
+    "packages/webapp/src/components/pool-table-wrapper.tsx": "policies-list — Pool table display component",
+    "packages/webapp/src/components/policy-card.tsx": "my-coverage — Policy card component",
+    "packages/webapp/src/components/ai-advisor.tsx": "pool-detail — AI chat advisor panel",
+    "packages/webapp/src/components/monitoring-chart.tsx": "pool-detail — Real-time monitoring chart",
+    "packages/webapp/src/components/agreement-viewer.tsx": "pool-detail — Agreement text display",
+    "packages/webapp/src/components/deposit-dialog.tsx": "pool-detail — Deposit liquidity dialog",
+    "packages/webapp/src/components/eligibility-form.tsx": "acquire-wizard — Eligibility verification form",
+    "packages/webapp/src/components/payment-selector.tsx": "acquire-wizard — Payment method selector",
+    "packages/webapp/src/components/stripe-payment-form.tsx": "acquire-wizard — Stripe Elements payment form",
+    "packages/webapp/src/components/czusd-converter.tsx": "pool-detail — CZUSD currency converter",
+    "packages/webapp/src/components/create-wizard/step-sources.tsx": "create-wizard — Data sources configuration step",
+    "packages/webapp/src/components/create-wizard/step-trigger.tsx": "create-wizard — Trigger conditions step",
+    "packages/webapp/src/components/create-wizard/step-agreements.tsx": "create-wizard — Agreements configuration step",
+    "packages/webapp/src/components/create-wizard/step-deploy.tsx": "create-wizard — Deploy and activate step",
+    "packages/webapp/src/lib/ai.ts": "ai-chat — Claude Service client (chat, chatSync)",
+    "packages/webapp/src/lib/contracts.ts": "Shared — Contract addresses and configurations",
+    "packages/webapp/src/lib/types.ts": "Shared — Domain types (PoolState, PolicyStatus, OnChainPool)",
+    "packages/webapp/src/lib/stripe.ts": "stripe-payment — Stripe client configuration",
+    "packages/webapp/src/lib/stripe-server.ts": "stripe-webhook — Server-side Stripe initialization",
+    "packages/webapp/src/lib/czusd.ts": "payments — CZUSD token integration",
+    "packages/webapp/src/lib/mock-data.ts": "Shared — Mock/demo data for development",
+    "packages/webapp/src/lib/agreement-texts.ts": "pool-detail — Insurance agreement legal text",
+    "packages/webapp/src/lib/thirdweb.ts": "Shared — Thirdweb Connect auth configuration",
+    "packages/contracts/src/ClaimZeroFactory.sol": "claim-zero-factory — Factory for deploying InsurancePool contracts",
+    "packages/contracts/src/InsurancePool.sol": "insurance-pool — Core pool contract (deposits, policies, settlement)",
+    "packages/contracts/src/PolicyNFT.sol": "policy-nft — ERC-721 policy representation",
+    "packages/contracts/src/CRERouter.sol": "cre-router — Routes CRE callbacks to pools",
+    "packages/contracts/src/EligibilityRegistry.sol": "eligibility-registry — On-chain eligibility rules",
+    "packages/contracts/src/ComplianceConsumer.sol": "compliance-consumer — CRE compliance data consumer",
+    "packages/contracts/src/CZUSDConsumer.sol": "czusd-consumer — CZUSD operations consumer",
+    "packages/contracts/src/CZUSD.sol": "czusd — ERC-20 stablecoin contract",
+    "packages/contracts/src/ace/PolicyEngine.sol": "policy-engine — ACE orchestrator",
+    "packages/contracts/src/ace/SolvencyPolicy.sol": "solvency-policy — Solvency ratio enforcement",
+    "packages/contracts/src/ace/PremiumVolumePolicy.sol": "premium-volume-policy — Premium volume limits",
+    "packages/contracts/src/ace/EligibilityPolicy.sol": "eligibility-policy — On-chain eligibility checks",
+    "packages/contracts/src/ace/KYCPolicy.sol": "kyc-policy — KYC verification enforcement",
+    "packages/contracts/src/ace/SanctionsPolicy.sol": "sanctions-policy — Sanctions screening",
+    "packages/contracts/src/ace/CoolingOffPolicy.sol": "cooling-off-policy — Cooling-off period enforcement",
+    "packages/contracts/src/ace/UnifiedExtractor.sol": "unified-extractor — Data extraction utility"
+  }
+}
